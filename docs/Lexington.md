@@ -13,15 +13,15 @@ The system diagram is shown in Figure 1.
 
 Detailed behavior of each submodule is documented in these documents:
 
--   [ROM](./ROM.md)
--   [RAM](./RAM.md)
--   [Register File](./RegisterFile.md)
--   [PC]
--   [Fetch](./Fetch.md)
--   [Decoder](./Decoder.md)
--   [ALU](./ALU.md)
--   [Load/Store](./Load_Store.md)
--   [Control and Status Registers (CSR)](./CSR.md)
+- [ROM](./ROM.md)
+- [RAM](./RAM.md)
+- [Register File](./RegisterFile.md)
+- [PC](./PC.md)
+- [Fetch](./Fetch.md)
+- [Decoder](./Decoder.md)
+- [ALU](./ALU.md)
+- [Load/Store](./Load_Store.md)
+- [Control and Status Registers (CSR)](./CSR.md)
 
 The following sections detail some of the general behavior of the device.
 
