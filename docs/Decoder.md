@@ -122,7 +122,7 @@ This instruction is not considered retired and should not increment `minstret` C
 | SRA   | 0100000 | 101 | 0110011 (OP)       | | `pc`+4                  | ALU_SRA  | `rs1` | `rs2`        | `rd` | 0 | 1 | never |
 | OR    | 0000000 | 110 | 0110011 (OP)       | | `pc`+4                  | ALU_OR   | `rs1` | `rs2`        | `rd` | 0 | 1 | never |
 | AND   | 0000000 | 111 | 0110011 (OP)       | | `pc`+4                  | ALU_AND  | `rs1` | `rs2`        | `rd` | 0 | 1 | never |
-| 
+| |
 | ADDI  | 0000000 | 000 | 0010011 (OP-IMM)   | | `pc`+4                  | ALU_ADD  | `rs1` | `imm[11:0]`  | `rd` | 0 | 1 | never |
 | SLLI  | 0000000 | 001 | 0010011 (OP-IMM)   | | `pc`+4                  | ALU_SLL  | `rs1` | `imm[4:0]`   | `rd` | 0 | 1 | never |
 | SLTI  | 0000000 | 010 | 0010011 (OP-IMM)   | | `pc`+4                  | ALU_SLT  | `rs1` | `imm[11:0]`  | `rd` | 0 | 1 | never |
@@ -132,23 +132,23 @@ This instruction is not considered retired and should not increment `minstret` C
 | SRAI  | 0100000 | 101 | 0010011 (OP-IMM)   | | `pc`+4                  | ALU_SRA  | `rs1` | `imm[4:0]`   | `rd` | 0 | 1 | never |
 | ORI   | 0000000 | 110 | 0010011 (OP-IMM)   | | `pc`+4                  | ALU_OR   | `rs1` | `imm[11:0]`  | `rd` | 0 | 1 | never |
 | ANDI  | 0000000 | 111 | 0010011 (OP-IMM)   | | `pc`+4                  | ALU_AND  | `rs1` | `imm[11:0]`  | `rd` | 0 | 1 | never |
-|
+| |
 | LUI   |         |     | 0110111 (LUI)      | | `pc`+4                  | ALU_ADD  | 0     | `imm[31:12]` | `rd` | 0 | 1 | never |
 | AUIPC |         |     | 0010111 (AUIPC)    | | `pc`+4                  | ALU_ADD  | `pc`  | `imm[31:12]` | `rd` | 0 | 1 | never |
-|
+| |
 | JAL   |         |     | 1101111 (JAL)      | | `pc`+`imm[20:1]`        | ALU_ADD  | `pc`  | 4            | `rd` | 0 | 1 | never (caught in fetch) | |
 | JALR  |         |     | 1100111 (JALR)     | | `rs1[31:0]`+`imm[11:0]` | ALU_ADD  | `pc`  | 4            | `rd` | 0 | 1 | never (caught in fetch) | | lowest bit is ignored
-|
+| |
 | BEQ   |         | 000 | 1100011 (BRANCH)   | | *see note ->            | ALU_XOR  | `rs1` | `rs2`        |      | 0 | 0 | never | | `next_pc` <= (`alu_zero`)  ? (`pc`+`imm[12:1]`) : (`pc`+4)
 | BNE   |         | 001 | 1100011 (BRANCH)   | | *see note ->            | ALU_XOR  | `rs1` | `rs2`        |      | 0 | 0 | never | | `next_pc` <= (`!alu_zero`) ? (`pc`+`imm[12:1]`) : (`pc`+4)
 | BLT   |         | 100 | 1100011 (BRANCH)   | | *see note ->            | ALU_SLT  | `rs1` | `rs2`        |      | 0 | 0 | never | | `next_pc` <= (`!alu_zero`) ? (`pc`+`imm[12:1]`) : (`pc`+4)
 | BGE   |         | 101 | 1100011 (BRANCH)   | | *see note ->            | ALU_SGE  | `rs1` | `rs2`        |      | 0 | 0 | never | | `next_pc` <= (`!alu_zero`) ? (`pc`+`imm[12:1]`) : (`pc`+4)
 | BLTU  |         | 110 | 1100011 (BRANCH)   | | *see note ->            | ALU_SLTU | `rs1` | `rs2`        |      | 0 | 0 | never | | `next_pc` <= (`!alu_zero`) ? (`pc`+`imm[12:1]`) : (`pc`+4)
 | BGEU  |         | 111 | 1100011 (BRANCH)   | | *see note ->            | ALU_SGEU | `rs1` | `rs2`        |      | 0 | 0 | never | | `next_pc` <= (`!alu_zero`) ? (`pc`+`imm[12:1]`) : (`pc`+4)
-|
+| |
 | FENCE   |       | 000 | 0001111 (MISC-MEM) | | `pc`+4                  | ALU_NOP  |       |              |      | 0 | 0 | never |
 | FENCE.I |       | 001 | 0001111 (MISC-MEM) | | `pc`+4                  | ALU_NOP  |       |              |      | 0 | 0 | never |
-|
+| |
 | LB    |         | 000 | 0000011 (LOAD)     | | `pc`+4                  | ALU_ADD | `rs1`  | `imm[11:0]`  |      | 0 | 1 | never (caught by LSU) |
 | LH    |         | 001 | 0000011 (LOAD)     | | `pc`+4                  | ALU_ADD | `rs1`  | `imm[11:0]`  |      | 0 | 1 | never (caught by LSU) |
 | LBU   |         | 100 | 0000011 (LOAD)     | | `pc`+4                  | ALU_ADD | `rs1`  | `imm[11:0]`  |      | 0 | 1 | never (caught by LSU) |
