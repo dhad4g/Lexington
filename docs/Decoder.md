@@ -106,6 +106,12 @@ Sets the `mepc` CSR to the address of *this* instruction.
 This instruction is not considered retired and should not increment `minstret` CSR.
 
 
+###### `WFI` Instruction
+
+The wait for interrupt (`WFI`) instruction is a microarchitecture hint instruction.
+This implementation treats `WFI` as a `NOP`.
+
+
 
 
 ## Decoder Truth Table

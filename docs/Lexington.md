@@ -25,12 +25,28 @@ Detailed behavior of each submodule is documented in these documents:
 
 The following sections detail some of the general behavior of the device.
 
-#### Reset
+
+### Memory Map
+
+Memory is divided into four major regions:
+
+- **MEM 0**: This memory region contains the reset instruction location as well as the default trap vector table location.
+This is where the instruction memory is located.
+- **MEM 1**: This is a secondary memory region.
+This is where the data memory is located.
+- ***Reserved***: This region is reserved for future hardware
+- **I/O MEM**: This region is for memory mapped I/O devices.
+See [CSR specification](./CSR.md) for device addresses.
+
+![](figures/MemoryMap.drawio.svg)
+
+
+### Reset
 
 Upon reset, the `pc` is set to 0x0.
 
 
-#### Non-Maskable Interrupts (NMI)
+### Non-Maskable Interrupts (NMI)
 
 NMIs are triggered by hardware error conditions.
 They case an immediate jump to 0x0 and set the `mepc` CSR to the address of the instruction that was interrupted.

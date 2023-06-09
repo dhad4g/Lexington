@@ -8,6 +8,9 @@ The GPro Lexington CPU is the first generation of RISC-V processors designed by 
 - Machine-mode only
 - Harvard architecture
 - Single cycle execution
-- No I/O or peripherals
+- Machine timer with interrupt support
+- 32 GPIO
+- Two external interrupt pins
+- UART interface
 
 The microarchitecture design is documented in [docs/Lexington.md](./docs/Lexington.md).
