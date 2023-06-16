@@ -1,6 +1,69 @@
-# CSR
+# Control and Status Registers (CSR)
 
-## Machine Level
+Attempts to access a non-existent CSR raise an illegal instruction exception.
+Attempts to access a CSR without appropriate privilege level (or write to a read-only) also raise an illegal instruction exception.
+For a read/write register with some read-only bits, write to the read-only bits are ignored.
+If *rd*=x0, the instruction shall not read the CSR.
+
+The [`mip`](#machine-interrupt-pending-mip),
+[`mepc`](#machine-exception-program-count-mepc),
+[`mcause`](#machine-cause-register-mcause),
+and [`mtval`](#machine-trap-value-register-mtval)
+CSRs are contained in the [Trap Unit](./Trap.md)
+
+## Ports
+
+### Parameters
+
+- **`WIDTH=32`** data width
+- **`HART_ID=0`** hardware thread id (see [`mhartid`](#hart-id-register-mhartid))
+- **`CSR_ADDR_WIDTH=12`** CSR address width
+
+### Inputs
+
+- **`clk`** processor clock
+- **`rst_n`** active-low synchronous reset
+- **`rd_en`** read enable
+- **`rd_addr[CSR_ADDR_WIDTH-1:0]`** read address
+- **`wr_en`** write enable
+- **`wr_addr[CSR_ADDR_WIDTH-1:0]`** write address
+- **`wr_data[WIDTH-1:0]`** write data
+- **`trap_rd_data[WIDTH-1:0]`** read data for trap CSRs
+- **`trap`** signals trap taken
+- **`xRET`** signals an `xRET` instruction is being executed
+
+### Outputs
+
+- **`rd_data[WIDTH-1:0]`** read data
+- **`trap_rd_en`** trap CSR read enable
+- **`trap_rd_addr[CSR_ADDR_WIDTH-1:0]`** trap CSR read address
+- **`trap_wr_en`** trap CSR write enable
+- **`trap_wr_addr[CSR_ADDR_WIDTH-1:0]`** trap CSR write address
+- **`trap_wr_data[WIDTH-1:0]`** trap CSR write data
+- **`mie`** global machine-mode interrupt enable
+- **`endianness`** data memory endianness (0=little,1=big)
+
+
+## Read and Write Behavior Specifications
+
+### Write Preserve, Read Ignore (WPRI)
+
+Some whole read/write fields are reserved for future use.
+Software should preserve these values when writing.
+Hardware must make them read-only zero.
+
+### Write Legal, Read Legal (WLRL)
+
+Software should only write legal values.
+This implementation allows writing and reading illegal values and does not raise an exception.
+
+### Write Any, Read Lega (WARL)
+
+Software may write any value, but will read only legal values.
+This implementation ignores illegal write values
+
+
+## Machine-Mode CSRs
 
 ### Machine ISA Register `misa`
 
@@ -19,8 +82,6 @@ The value of `MXL` is 1 for the 32-bit GPro Lexington core.
 The Extensions field encodes the presence of standard ISA extensions.
 Each bit encodes one letter of the alphabet with bit 0 encoding the "A" extension and bit 25 encoding the "Z" extensions.
 The only extension bit asserted in this implementation is bit eight, the "I" bit.
-
-This implementation ignores writes the `misa` register
 
 
 ### Machine Vendor ID Register `mvendorid`
@@ -69,27 +130,38 @@ Figures 2 and 3 show the encoding of `mstatus` and `mstatush` respectively.
 ![](figures/csr/mstatush.png) \
 **Figure 3.** Encoding of `mstatush` register
 
-| Bit(s) | Name | Description | Default Value |
-| --- | --- | --- | --- |
-| 1     | SIE   | *Unused:* Supervisor-mode interrupt enable |
-| 3     | MIE   | Manager-mode interrupt enable | 1
-| 5     | SPIE  | *Unused:* Supervisor-mode |
-| 6     | UBE   | *Unused:* User-mode data memory endianness
-| 7     | MPIE  | *Unused:* Manager-mode previous interrupt enable |
-| 8     | SPP   | *Unused:* Supervisor-mode previous privilege mode |
-| 10:9  | VS    | *Unused:* Vector extensions state |
-| 12:11 | MPP   | *Unused:* Manager-mode previous privilege mode |
-| 14:13 | FS    | *Unused:* Floating-point unit state
-| 16:15 | XS    | *Unused:* Additional user-mode extensions state |
-| 17    | MPRV  | *Unused:* Modify privilege | 
-| 18    | SUM   | *Unused:* Permit supervisor user memory access |
-| 19    | MXR   | *Unused:* Make executable readable |
-| 20    | TVM   | *Unused:* Trap virtual memory |
-| 21    | TW    | *Unused:* Timeout wait |
-| 22    | TSR   | *Unused:* Trap SRET |
-| 31    | SD    | *Unused:* Extensions state summary |
-| 36    | SBE   | *Unused:* Supervisor-mode data memory endianness |
-| 37    | MBE   | Manager-mode data memory endianness | 0
+**Table 1.** Fields of `mstatus` register
+| Bit(s) | Name| R/W | Default Value | Description |
+| --- | --- | --- | --- | --- |
+| 1     | SIE   | r/- | 1 | ~~Supervisor-mode interrupt enable~~ |
+| 3     | MIE   | r/w | 1 | Manager-mode interrupt enable |
+| 5     | SPIE  | r/- | 1 | ~~Supervisor-mode previous interrupt enable~~ |
+| 6     | UBE   | r/- | 0 | ~~User-mode data memory endianness~~
+| 7     | MPIE  | r/w | 1 | Manager-mode previous interrupt enable |
+| 8     | SPP   | r/- | 0 | ~~Supervisor-mode previous privilege mode~~ |
+| 10:9  | VS    | r/- | 0 | ~~Vector extension state~~ |
+| 12:11 | MPP   | r/- | 3 | Manager-mode previous privilege mode |
+| 14:13 | FS    | r/- | 0 | ~~Floating-point unit state~~ |
+| 16:15 | XS    | r/- | 0 | ~~Additional user-mode extensions state~~ |
+| 17    | MPRV  | r/- | 0 | ~~Modify effective privilege~~ |
+| 18    | SUM   | r/- | 0 | ~~Permit supervisor user memory access~~ |
+| 19    | MXR   | r/- | 0 | ~~Make executable readable~~ |
+| 20    | TVM   | r/- | 0 | ~~Trap virtual memory~~ |
+| 21    | TW    | r/- | 0 | ~~Timeout wait~~ |
+| 22    | TSR   | r/- | 0 | ~~Trap SRET~~ |
+| 31    | SD    | r/- | 0 | ~~Extensions state summary~~ |
+| 36    | SBE   | r/- | 0 | ~~Supervisor-mode data memory endianness~~ |
+| 37    | MBE   | r/w | 0 | Manager-mode data memory endianness (0=little,1=big) |
+
+When a trap is taken:
+- `MPIE` is set to `MIE`
+- `MIE` is set to 0
+- ~~`MPP` is set to 3 (i.e. machine-mode)~~ *Unused*
+
+When an `MRET` instruction is executed:
+- `MIE` is set to `MPIE`
+- `MPIE` is set to 1
+- ~~`MPP` is set to 3 (i.e. machine-mode, only supported mode)~~ *Unused*
 
 
 ### Machine Trap-Vector Base-Address Register `mtvec`
@@ -121,7 +193,7 @@ Reset and NMIs always trap to address 0x0.
 *0x344*
 
 This read/write register encodes pending interrupts.
-Bit *i* corresponds to interrupt cause number *i* as reported in CSR [mcause](#machine-cause-register-mcause).
+Bit *i* corresponds to interrupt cause number *i* as reported in CSR [`mcause`](#machine-cause-register-mcause).
 Pending interrupts are not cleared by hardware but must be cleared by software by clearing the corresponding bit.
 
 The global interrupt enable bit in [`mstatus`](#machine-status-register-mstatus-and-mstatush) and the appropriate enable bit in ['mie'](#machine-interrupt-enable-mie) must be set for an interrupt to trap.
@@ -132,6 +204,9 @@ Interrupts are immediately enabled at the execution of *x*RET and a pending inte
 Bits 15:0 encode the standard interrupt causes.
 These bits have unique behaviors such as being read-only.
 
+Additional interrupt sources are listed in the [`mcause`](#machine-cause-register-mcause) section.
+These bits are read/write and the bit must be cleared by software in the trap handler.
+
 ![](figures/csr/mip.png)
 
 **Standard Interrupt Bits**
@@ -139,11 +214,11 @@ These bits have unique behaviors such as being read-only.
 | Bit | Name | Description |
 | --- | --- | --- |
 | 1  | SSIP | *Unused* Supervisor-level software interrupt pending (read-only)
-| 3  | MSIP | Machine-level software interrupt pending (read-only)
+| 3  | MSIP | *Unused* Machine-level software interrupt pending (read-only)
 | 5  | STIP | *Unused* Supervisor-level timer interrupt pending (read-only)
 | 7  | MTIP | Machine-level timer interrupt pending (read-only)
 | 9  | SEIP | *Unused* Supervisor-level external interrupt pending (read-only)
-| 11 | MEIP | Machine-level external interrupt pending (read-only)
+| 11 | MEIP | *Unused* Machine-level external interrupt pending (read-only)
 
 **Interrupt Priority**
 | Priority | Interrupt Type |
@@ -220,12 +295,18 @@ All other bits encode the trap type.
 **Interrupt trap codes**
 | Trap Code | Description |
 | --- | --- |
-| 1 | Supervisor software interrupt |
-| 3 | Machine software interrupt |
-| 5 | Supervisor timer interrupt |
-| 7 | Machine timer interrupt |
-| 9 | Supervisor external interrupt |
-| 11 | Machine external interrupt |
+| 1  | ~~Supervisor software interrupt~~ |
+| 3  | ~~Machine software interrupt~~ |
+| 5  | ~~Supervisor timer interrupt~~ |
+| 7  | Machine timer interrupt |
+| 9  | ~~Supervisor external interrupt~~ |
+| 11 | ~~Machine external interrupt~~ |
+| 16 | GPIO interrupt 0 |
+| 17 | GPIO interrupt 1 |
+| 18 | UART0 RX interrupt |
+| 19 | UART0 TX interrupt |
+| 20 | timer0 interrupt |
+| 21 | timer1 interrupt |
 
 **Exception trap codes**
 | Trap Code | Description |

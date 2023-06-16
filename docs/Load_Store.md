@@ -14,8 +14,7 @@ This implementation uses purely combinatorial logic
 
 #### Inputs
 
-- **`mem_en_i`** memory access enable
-- **`reg_wr_en_i`** register file write enable input
+- **`lsu_op`** encodes lsu operation
 - **`alu_data[WIDTH-1:0]`** data from ALU or calculated memory address
 - **`src2[WIDTH-1:0]`** src2 value for store instruction
 - **`mem_rd_data[WIDTH-1:0]`** data from memory
@@ -52,16 +51,26 @@ The `mem_en_i` and `reg_wr_en_i` control the operation of the LSU.
 Table 1. shows how these signals control its behavior.
 
 **Table 1.** LSU operations
-| `mem_en_i` | `reg_wr_en_i` | | operation |
-| --- | --- | - | --- |
-| 0 | 0 | | nop |
-| 0 | 1 | | write ALU output to destination register
-| 1 | 0 | | store src2 value to memory
-| 1 | 1 | | load from memory to destination register
 
 | `lsu_op` | operation |
 | --- | --- |
 | 000 | *nop* |
-| 001 | Save `alu_data` to register |
+| 001 | Save `alu_data` to `dest_reg` |
 | 010 | Store `src2` to memory at `alu_data` |
-| 011 | Load from memory at `alu_data` |
+| 011 | Load from memory at `alu_data` to `dest_reg` |
+| 100 | Write `alu_data` to `csr` |
+| 101 | Write `alu_data` to `csr` & save `src2` to `dest_reg` |
+| other | *reserved* |
+
+
+### Memory Mapped Peripherals
+
+A list of all memory mapped peripherals and their address space are listed in Table 2.
+
+**Table 2.** Memory Mapped Peripherals
+| Address | Peripheral |
+| --- | --- |
+| 0xFFFF_FF00 | `timer0` |
+| 0xFFFF_FF04 | `timer1` |
+| 0xFFFF_FF90 - 0xFFFF_FF9F | `mtime` |
+| 0xFFFF_FFA0 - 0xFFFF_FFAF | `GPIOA` |
