@@ -1,6 +1,6 @@
 # Fetch
 
-The Instruction Fetch Unit reads the next instruction from the program memory.
+The Instruction Fetch Unit reads the next instruction from the program memory via the instruction bus (ibus).
 This implementation is purely combinatorial.
 
 
@@ -14,15 +14,15 @@ This implementation is purely combinatorial.
 #### Inputs
 
 - **`pc[WIDTH-1:0]`** current value of the program counter
-- **`mem_rd_data[WIDTH-1:0]`** data from the program memory ROM
+- **`ibus_rd_data[WIDTH-1:0]`** read data from ibus
 
 #### Outputs
 - **``**
-- **`inst[WIDTH-1:0]`** current instruction
-- **`mem_rd_addr[ROM_ADDR_WIDTH-1:0]`** memory read address (word-addressable)
-- **`mem_rd_en`** memory read enable
+- **`inst[WIDTH-1:0]`** current instruction bits
+- **`ibus_rd_en`** ibus read enable
+- **`ibus_rd_addr[ROM_ADDR_WIDTH-1:0]`** ibus read address (word-addressable)
 - **`misaligned`** asserted if the PC value is not 4-byte aligned
-- **`access_fault`** asserted if the PC is outside the address space of the ROM
+- **`access_fault`** asserted if the PC is outside the ibus address space
 
 
 ## Behavior

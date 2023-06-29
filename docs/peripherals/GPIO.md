@@ -48,7 +48,7 @@ Bit *i* of the `mode`, `idata`, and `odata` registers corresponds to pin *i*.
 Data in the `idata` register is read asynchronously from the I/O pins.
 The *int_conf* register encoding is shown in Figure 1.
 
-![](figures/GPIO_interrupt_register.drawio.svg)
+![](./figures/GPIO_interrupt_register.drawio.svg)
 
 **Figure 1.** `GPIOx_INT_CONF` register encoding
 

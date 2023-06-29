@@ -10,13 +10,13 @@ This is the program counter to index the current instruction
 
 #### Inputs
 
-- **`en`** increment enable
-- **`d[WIDTH-1:0]`** next program counter value
+- **`next_pc[WIDTH-1:0]`** next program counter value
 
 ### Outputs
 
-- **`q[WIDTH-1:0]`** current program counter value
+- **`pc[WIDTH-1:0]`** current program counter value
 
 ## Behavior
 
-If `incr_en` is high, `pc` is set to `incr_base`+`incr_offset`.
+The PC is a register that is always set to `next_pc` on the rising clock edge
+Reset value is managed by the [Trap Unit](./Trap.md)
