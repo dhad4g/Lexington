@@ -1,0 +1,118 @@
+#!/bin/bash
+
+SCRIPT_NAME=$0
+
+XVLOG_OPTIONS="--sv"
+#OUT_FILTER="grep --color=always -e 'ERROR.*' -e 'CRIT.*' -e 'WARN.*'"
+
+function usage {
+    cat <<USAGE_EOF
+
+usage: $SCRIPT_NAME [OPTION]... [MODULE]...
+
+    <module>    Name of module test
+
+    -a, --all   Run tests for all modules
+    -h, --help  Prints this usage message
+
+USAGE_EOF
+}
+
+function sim() {
+    if [ $# -eq 0 ]; then
+        >&2 echo "Function sim called with no module argument"
+        exit 2
+    fi
+    module=$1
+    mkdir -p "build/sim/$module"
+    cd "build/sim/$module"
+    source="../../../src/hdl/${module}.sv"
+    testbench="../../../sim/hdl/${module}_TB.sv"
+    echo "$module"
+    echo "    $source"
+    echo "    $testbench"
+    echo ""
+    # compile
+    xvlog $XVLOG_OPTIONS $source $testbench #| $OUT_FILTER
+    rval=$?
+    if [ "$rval" == "0" ]; then
+        echo "Compile for $module complete"
+    else
+        >&2 echo "Compile failed for $module"
+        >&2 echo "    Check build/sim/$module/xvlog.log"
+        return $rval
+    fi
+    # elaborate
+    xelab -debug typical -s sim ${module}_TB #| $OUT_FILTER
+    rval=$?
+    if [ "$rval" = "0" ]; then
+        echo "Elaborate for $module complete"
+    else
+        >&2 echo "Elaborate failed for $module"
+        >&2 echo "    Check build/sim/$module/xelab.log"
+        return $rval
+    fi
+    # simulate
+    xsim --runall sim
+    rval=$?
+    if [ "$rval" = "0" ]; then
+        echo "Simulate for $module complete"
+    else
+        >&2 echo "Simulate failed for $module"
+        return $rval
+    fi
+    tail -n 2 ${module}.log | grep PASS
+    return $?
+}
+
+
+# Check for empty arguments
+if  [ $# -eq 0 ]; then
+    >&2 echo "No arguments provided"
+    usage
+    exit 1
+fi
+
+all=false
+modules=()
+while [[ $# -gt 0 ]]; do
+   case "$1" in
+        -a | --all)
+            all=true
+            shift
+            ;;
+        -h | --help)
+            usage
+            exit 0
+            ;;
+        -* | --*)
+            >&2 echo "Unknown argument $1"
+            exit 1
+            ;;
+        *)
+            modules+=("$1")
+            shift
+    esac
+done
+
+if $all; then
+    if [ "${#modules[@]}" -gt 0 ]; then
+        >&2 echo "Module names must not be provided when using the --all option"
+        exit 1
+    fi
+    modules=$(find sim/hdl | grep -E '_TB\.sv$' | sed -e 's/_TB\.sv$//' | sed -e 's/sim\/hdl\///')
+fi
+
+fail=0
+for module in $modules; do
+    sim $module
+    rval=$?
+    if [ "$rval" != "0" ]; then
+        fail=1
+        echo
+        >&2 echo "Test for module $module failed. Exit value $rval"
+    fi
+    echo
+done
+
+exit $fail
