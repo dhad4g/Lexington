@@ -4,10 +4,10 @@
 
 The GPro Lexington CPU is a single-cycle RISC-V RV32I implementation.
 It features a read-only program memory and separate read/write data memory.
-The system diagram is shown in Figure 1.
+Figure 1 shows a simplified diagram of the CPU core
 
-![](./figures/BlockDiagram.drawio.svg) \
-**Figure 1.** GPro Lexington block diagram
+![](./figures/Core_BlockDiagram.drawio.svg) \
+**Figure 1.** GPro Lexington simplified core
 
 ## Behavior
 
@@ -25,13 +25,18 @@ Detailed behavior of each submodule is contained in these documents:
 - [Control and Status Registers (CSR)](./CSR.md)
 - [Trap Unit](./Trap.md)
 
-Information about all supported instructions is found in the [Decoder](./Decoder.md) documentation.
+The list of supported instructions can be found in the [Decoder](./Decoder.md) section.
 
-Information about programming the device is found in the [Toolchain](./Toolchain.md) documentation.
+Information about programming the device is found in the [Toolchain](./Toolchain.md) section.
+
+A full diagram of the SoC (minus peripherals) is shown in Figure 2.
+
+![](./figures/BlockDiagram.drawio.svg) \
+**Figure 2.** GPro Lexington SoC
 
 ### Memory Map
 
-Memory is divided into four major regions:
+Memory is divided into four major regions as shown in Figure 3:
 
 - **ROM**: This read-only executable memory region contains the reset instruction location (0x0000_0000).
 Memory must begin at address 0x0000_0000 and may be up to 1 GB (default 4 KB).
@@ -44,7 +49,11 @@ See [Load/Store specification](./Load_Store.md#memory-mapped-devices) for device
 - **I/O**: This region is for memory mapped I/O peripherals such as UART.
 See [Load/Store specification](./Load_Store.md#memory-mapped-devices) for device addresses.
 
-![](./figures/MemoryMap.drawio.svg)
+![](./figures/MemoryMap.drawio.svg) \
+**Figure 3.** Memory Map
+
+Addresses for system devices, such as the machine-mode timer (mtime), can be found in the [DBus](./DBus.md) section.
+Addresses for peripheral devices can be found in the [AXI4-Lite Crossbar](./AXI4-Lite_Crossbar.md) section.
 
 
 ### Reset

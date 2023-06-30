@@ -2,69 +2,22 @@
 
 SCRIPT_NAME=$0
 
+RTL_SRC_DIR="rtl"
+TB_DIR="testbench"
+
 XVLOG_OPTIONS="--sv"
-#OUT_FILTER="grep --color=always -e 'ERROR.*' -e 'CRIT.*' -e 'WARN.*'"
 
-function usage {
-    cat <<USAGE_EOF
+RED="\x1b[31m"
+GREEN="\x1b[32m"
+YELLOW="\x1b[33m"
+BLUE="\x1b[34m"
+NORMAL="\x1b[0m"
 
-usage: $SCRIPT_NAME [OPTION]... [MODULE]...
-
-    <module>    Name of module test
-
-    -a, --all   Run tests for all modules
-    -h, --help  Prints this usage message
-
-USAGE_EOF
-}
-
-function sim() {
-    if [ $# -eq 0 ]; then
-        >&2 echo "Function sim called with no module argument"
-        exit 2
-    fi
-    module=$1
-    mkdir -p "build/sim/$module"
-    cd "build/sim/$module"
-    source="../../../src/hdl/${module}.sv"
-    testbench="../../../sim/hdl/${module}_TB.sv"
-    echo "$module"
-    echo "    $source"
-    echo "    $testbench"
-    echo ""
-    # compile
-    xvlog $XVLOG_OPTIONS $source $testbench #| $OUT_FILTER
-    rval=$?
-    if [ "$rval" == "0" ]; then
-        echo "Compile for $module complete"
-    else
-        >&2 echo "Compile failed for $module"
-        >&2 echo "    Check build/sim/$module/xvlog.log"
-        return $rval
-    fi
-    # elaborate
-    xelab -debug typical -s sim ${module}_TB #| $OUT_FILTER
-    rval=$?
-    if [ "$rval" = "0" ]; then
-        echo "Elaborate for $module complete"
-    else
-        >&2 echo "Elaborate failed for $module"
-        >&2 echo "    Check build/sim/$module/xelab.log"
-        return $rval
-    fi
-    # simulate
-    xsim --runall sim
-    rval=$?
-    if [ "$rval" = "0" ]; then
-        echo "Simulate for $module complete"
-    else
-        >&2 echo "Simulate failed for $module"
-        return $rval
-    fi
-    tail -n 2 ${module}.log | grep PASS
-    return $?
-}
-
+SUCCESS_FORMAT="s,(PASS(ED)?|SUCCESS),$GREEN\1$NORMAL,I"
+WARN_FORMAT="s,(.*WARN.*),$YELLOW\1$NORMAL,I"
+ERROR_FORMAT="s,(.*(FAIL|ERROR).*),$RED\1$NORMAL,I"
+ERROR2_FORMAT="s,((FAIL|ERROR):?)(\s)(.*/)([^/]+\.s?v((\sLine):\s?[0-9]+)?)(.*),$RED\1\3$BLUE\5$RED\3\4\5\8$NORMAL,I"
+OUT_FORMAT="sed -E $SUCCESS_FORMAT;$WARN_FORMAT;$ERROR_FORMAT;$ERROR2_FORMAT"
 
 # Check for empty arguments
 if  [ $# -eq 0 ]; then
@@ -73,12 +26,110 @@ if  [ $# -eq 0 ]; then
     exit 1
 fi
 
+
+function usage {
+    cat <<USAGE_EOF
+
+usage: $SCRIPT_NAME [OPTION]... [MODULE]...
+
+    <module>    Name of module test
+
+    -a, --all       Run tests for all modules
+        --check     Compile and elaborate only (no sim)
+    -h, --help      Prints this usage message
+
+USAGE_EOF
+}
+
+
+function sim() {
+    if [ $# -eq 0 ]; then
+        >&2 echo "Function sim called with no module argument"
+        exit 2
+    fi
+    module=$1
+    if [ $# -eq 1 ]; then
+        check_only=false
+    else
+        check_only=$2
+    fi
+    mkdir -p "build/sim/$module"
+    cd "build/sim/$module"
+    source="../../../${RTL_SRC_DIR}/${module}.sv"
+    testbench="../../../${TB_DIR}/${module}_TB.sv"
+    echo "$module"
+    echo "    $source"
+    # find dependencies
+    dependencies=($(grep -E '^//depend ' "$source" | sed -e 's/^\/\/depend //' ))
+    for i in "${!dependencies[@]}"; do
+        dependencies[i]="../../../${RTL_SRC_DIR}/${dependencies[$i]}"
+        echo "    ${dependencies[$i]}"
+    done
+    echo "    $testbench"
+    echo
+    # compile
+    xvlog $XVLOG_OPTIONS $source $testbench $dependencies | $OUT_FORMAT
+    rval=$PIPESTATUS
+    #rval=$?
+    if [ "$rval" == "0" ]; then
+        echo
+        echo -e "${BLUE}Compile for $module complete${NORMAL}"
+        echo
+    else
+        >&2 echo
+        >&2 echo -e "${RED}FAIL: Compile failed for $module${NORMAL}"
+        >&2 echo "Check build/sim/$module/xvlog.log"
+        >&2 echo
+        return $rval
+    fi
+    # elaborate
+    xelab -debug typical -s sim ${module}_TB | $OUT_FORMAT
+    rval=$PIPESTATUS
+    if [ "$rval" = "0" ]; then
+        echo
+        echo -e "${BLUE}Elaborate for $module complete${NORMAL}"
+        echo
+    else
+        >&2 echo
+        >&2 echo -e "${RED}FAIL: Elaborate failed for $module${NORMAL}"
+        >&2 echo "Check build/sim/$module/xelab.log"
+        >&2 echo
+        return $rval
+    fi
+    # simulate
+    if $check_only; then
+        return $rval
+    else
+        xsim --runall sim | $OUT_FORMAT
+        rval=$PIPESTATUS
+        if [ "$rval" = "0" ]; then
+            #echo -e "${BLUE}Simulate for $module complete${NORMAL}"
+            echo
+        else
+            >&2 echo
+            >&2 echo -e "${RED}FAIL: Simulate failed for $module${NORMAL}"
+            >&2 echo
+            return $rval
+        fi
+        tail -n 2 ${module}.log | grep PASS > /dev/null
+        return $?
+    fi
+}
+
+
+
+
 all=false
+check_only=false
 modules=()
 while [[ $# -gt 0 ]]; do
    case "$1" in
         -a | --all)
             all=true
+            shift
+            ;;
+        --check)
+            check_only=true
             shift
             ;;
         -h | --help)
@@ -100,19 +151,24 @@ if $all; then
         >&2 echo "Module names must not be provided when using the --all option"
         exit 1
     fi
-    modules=$(find sim/hdl | grep -E '_TB\.sv$' | sed -e 's/_TB\.sv$//' | sed -e 's/sim\/hdl\///')
+    modules=$(find $TB_DIR | grep -E '_TB\.sv$' | sed -e 's/_TB\.sv$//' | sed -e "s/${TB_DIR}\///")
 fi
 
-fail=0
+fail=false
 for module in $modules; do
-    sim $module
+    sim $module $check_only
     rval=$?
     if [ "$rval" != "0" ]; then
-        fail=1
+        fail=true
         echo
-        >&2 echo "Test for module $module failed. Exit value $rval"
+        >&2 echo -e "Test for module $module ${RED}FAILED${NORMAL}. Exit value $rval"
     fi
     echo
 done
+
+if ! $fail; then
+    echo
+    echo -e "All modules ${GREEN}PASSED${NORMAL}"
+fi
 
 exit $fail
