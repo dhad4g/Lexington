@@ -35,7 +35,7 @@ module regfile_TB ();
             .dest_data(dest_data)
         );
 
-    
+
     // 10 MHz clock
     initial clk = 0;
     initial forever #50 clk = ~clk;
@@ -54,7 +54,7 @@ module regfile_TB ();
 
 
     reg [WIDTH-1:0] _d1, _d2;
-    always @(posedge clk) begin
+    always_ff @(posedge clk) begin
         rs2_addr <= rs1_addr;
         rs1_addr <= dest_addr;
         dest_addr <= $random();

@@ -17,11 +17,9 @@ This implementation is purely combinatorial.
 - **`ibus_rd_data[WIDTH-1:0]`** read data from ibus
 
 #### Outputs
-- **``**
 - **`inst[WIDTH-1:0]`** current instruction bits
 - **`ibus_rd_en`** ibus read enable
 - **`ibus_rd_addr[ROM_ADDR_WIDTH-1:0]`** ibus read address (word-addressable)
-- **`misaligned`** asserted if the PC value is not 4-byte aligned
 - **`access_fault`** asserted if the PC is outside the ibus address space
 
 

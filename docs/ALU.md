@@ -6,17 +6,17 @@ It is purely combinatorial logic.
 
 ## Ports
 
-#### Parameters
+### Parameters
 
 - **`WIDTH=32`** data width
 
-#### Inputs
+### Inputs
 
 - **`src1[WIDTH-1:0]`** left-side operand
 - **`src2[WIDTH-1:0]`** right-side operand
 - **`alu_op[3:0]`** operation select
 
-#### Outputs
+### Outputs
 
 - **`result[WIDTH-1:0]`** ALU operation result
 - **`zero`** result zero flag
