@@ -81,6 +81,7 @@
         "WARL",
         "WLRL",
         "WPRI",
-        "XORI"
+        "XORI",
+        "xret"
     ]
 }

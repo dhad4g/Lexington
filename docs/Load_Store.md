@@ -58,18 +58,28 @@ The output truth table is shown in Table 2.
 
 **Important:** If either `data_misaligned` or `data_access_fault` is asserted, the outputs `dest_en`, `dbus_rd_en`, `dbus_wr_en`, and `csr_wr_en` should all be low.
 
+*Note: CSR address is handled by decode*
+
 **Table 1.** LSU operations
 
 | `lsu_op` | Name | Operation |
 | --- | --- | --- |
-| 000 | LSU_NOP     | Do nothing |
-| 001 | LSU_REG     | Save `alu_result` to `dest_reg` |
-| 010 | LSU_STORE   | Store `alt_data` to memory at `alu_result` |
-| 011 | LSU_LOAD    | Load from memory at `alu_result` to `dest_reg` |
-| 100 | LSU_CSRR    | Save `alt_data` to `dest_reg` |
-| 101 | LSU_CSRRW   | Write `alu_result` to `csr` & save `alt_data` to `dest_reg` |
-| 110 | *reserved*  | undefined |
-| 111 | *reserved*  | undefined |
+| 0000 | LSU_LB     | Load **sign-extended** byte (8-bit) from memory at `alu_result` to `dest_reg`
+| 0001 | LSU_LH     | Load **sign-extended** half-word (16-bit) from memory at `alu_result` to `dest_reg`
+| 0010 | LSU_LW     | Load word (32-bit) from memory at `alu_result` to `dest_reg`
+| 0011 | *reserved* | undefined *(reserved for 64-bit)*
+| 0100 | LSU_LBU    | Load **zero-extended** byte (8-bit) from memory at `alu_result` to `dest_reg`
+| 0101 | LSU_LHU    | Load **zero-extended** half-word (16-bit) from memory at `alu_result` to `dest_reg`
+| 0110 | *reserved* | undefined *(reserved for 64-bit)*
+| 0111 | *reserved* | undefined
+| 1000 | LSU_SB     | Store byte (8-bit) of `ald_data` to memory at `alu_result`
+| 1001 | LSU_SH     | Store half-word (16-bit) of `ald_data` to memory at `alu_result`
+| 1010 | LSU_SW     | Store word (32-bit) of `ald_data` to memory at `alu_result`
+| 1011 | *reserved* | undefined *(reserved for 64-bit)*
+| 1100 | LSU_CSRR   | CSR read-only; Save `alt_data` to `dest_reg`
+| 1101 | LSU_CSRRW  | CSR read/write: Save `alt_data` to `dest_reg`, and write `alu_result` to CSR
+| 1110 | LSU_REG    | Save `alu_result` to `dest_reg`
+| 1111 | LSU_NOP    | Do nothing
 
 **Table 2.** LSU truth table
 

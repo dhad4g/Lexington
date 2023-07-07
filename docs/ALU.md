@@ -45,12 +45,12 @@ The zero output is always set as the bitwise or of all result bits.
 | 4'b0110 | ALU_OR      | OR
 | 4'b0111 | ALU_AND     | AND
 | 4'b1000 | ALU_SUB     | subtract
-| 4'b1001 | *reserved*  | *ALU_NOP*
+| 4'b1001 | *reserved*  |
 | 4'b1010 | ALU_SLT     | set if less than signed
 | 4'b1011 | ALU_SGE     | set if greater than or equal signed
-| 4'b1100 | *reserved*  | *ALU_NOP*
+| 4'b1100 | *reserved*  |
 | 4'b1101 | ALU_SRA     | shift right arithmetic
-| 4'b1110 | *reserved*  | *ALU_NOP*
+| 4'b1110 | *reserved*  |
 | 4'b1111 | ALU_NOP     | do nothing, pass through `src1` to `result`
 
 *all reserved instructions should act as a NOP*
