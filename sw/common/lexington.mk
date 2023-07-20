@@ -30,10 +30,13 @@ CORE_SRC += $(LEXINGTON_COM_PATH)/startup_lexington.S
 
 # Linker script
 LD_SCRIPT ?= $(LEXINGTON_COM_PATH)/lexington.ld
+# MakeHex script
+MAKE_HEX ?= $(LEXINGTON_COM_PATH)/makehex.py
 
 # Main output files
 APP_ELF = main.elf
-APP_BIN = main.bin
+APP_BIN = rom.bin
+APP_HEX = rom.hex
 DUMP    = disassemble.dump
 
 SRC  = $(APP_SRC)
@@ -65,7 +68,7 @@ LD_LIBS = -lm -lc -lgcc
 
 
 # Targets
-build:          $(APP_BIN)
+build:          $(APP_HEX)
 disassemble:    $(DUMP)
 
 
@@ -79,6 +82,10 @@ $(APP_BIN): $(APP_ELF)
 	@$(OBJCOPY) -I elf32-little $< -j .data   -O binary data.bin
 	@cat text.bin rodata.bin data.bin > $@
 	@rm -f text.bin rodata.bin data.bin
+
+
+$(APP_HEX): $(APP_BIN)
+	@python3 $(MAKE_HEX) $< 1024 > $@
 
 
 $(DUMP): $(APP_ELF)

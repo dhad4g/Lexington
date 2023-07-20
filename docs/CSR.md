@@ -20,9 +20,9 @@ However, trap CSR operations are delegated to the trap unit using combinatorial 
 
 ### Parameters
 
-- **`WIDTH=32`** data width
+- **`XLEN=32`** data width (from rv32)
+- **`CSR_ADDR_WIDTH=12`** CSR address width (from rv32)
 - **`HART_ID=0`** hardware thread id (see [`mhartid`](#hart-id-register-mhartid))
-- **`CSR_ADDR_WIDTH=12`** CSR address width
 
 ### Inputs
 
@@ -33,19 +33,19 @@ However, trap CSR operations are delegated to the trap unit using combinatorial 
 - **`explicit_rd`** flag indicating explicit CSR read (ignored in this implementation)
 - **`wr_en`** write enable
 - **`wr_addr[CSR_ADDR_WIDTH-1:0]`** write address
-- **`wr_data[WIDTH-1:0]`** write data
-- **`trap_rd_data[WIDTH-1:0]`** read data for trap CSRs
-- **`trap_taken`** signals trap taken
+- **`wr_data[XLEN-1:0]`** write data
+- **`trap_rd_data[XLEN-1:0]`** read data for trap CSRs
+- **`time_rd_data[63:0]`** read-only unprivileged time and timeh CSRs
+- **`trap`** signals trap taken
 
 ### Outputs
 
-- **`rd_data[WIDTH-1:0]`** read data
+- **`rd_data[XLEN-1:0]`** read data
 - **`global_mie`** global machine-mode interrupt enable
 - **`trap_rd_en`** trap CSR read enable
 - **`trap_wr_en`** trap CSR write enable
-- **`trap_addr[CSR_ADDR_WIDTH-1:0]`** trap CSR read/write address
-- **`trap_wr_data[WIDTH-1:0]`** trap CSR write data
 - **`endianness`** data memory endianness (0=little,1=big)
+- **`illegal_csr`** indicates illegal CSR address or access permission
 
 
 ## Read and Write Behavior Specifications

@@ -1,0 +1,74 @@
+`ifndef __LEXINGTON_SV
+`define __LEXINGTON_SV
+
+`include "rv32.sv"
+
+
+package lexington;
+
+    localparam DEFAULT_ROM_ADDR_WIDTH   = 10;           // word-addressable ROM address bits
+    localparam DEFAULT_RAM_ADDR_WIDTH   = 10;           // word-addressable RAM address bits
+    localparam DEFAULT_AXI_ADDR_WIDTH   = 29;           // byte-addressable AXI address space bits
+    localparam MTIME_ADDR_WIDTH         = 4;            // byte-addressable machine timer address bits
+
+    // The following addresses are byte-addressable 32-bit address space
+    localparam DEFAULT_RESET_ADDR       = 32'h0000_0000;  // program counter reset/boot address
+    localparam DEFAULT_ROM_BASE_ADDR    = 32'h0000_0000;  // must be aligned to ROM size
+    localparam DEFAULT_RAM_BASE_ADDR    = 32'h4000_0000;  // must be aligned to RAM size
+    localparam DEFAULT_MTIME_BASE_ADDR  = 32'hC000_0000;  // see CSR documentation
+    localparam DEFAULT_AXI_BASE_ADDR    = 32'hE000_0000;  // must be aligned to AXI address space
+
+
+    localparam ALU_OP_WIDTH     = 4;                // ALU operation select width
+    typedef enum logic [ALU_OP_WIDTH-1:0] {
+        ALU_ADD  = 4'b0000,
+        ALU_SLL  = 4'b0001,
+        ALU_SLTU = 4'b0010,
+        ALU_SGEU = 4'b0011,
+        ALU_XOR  = 4'b0100,
+        ALU_SRL  = 4'b0101,
+        ALU_OR   = 4'b0110,
+        ALU_AND  = 4'b0111,
+        ALU_SUB  = 4'b1000,
+        /*reserved*/
+        ALU_SLT  = 4'b1010,
+        ALU_SGE  = 4'b1011,
+        /*reserved*/
+        ALU_SRA  = 4'b1101,
+        /*reserved*/
+        ALU_NOP  = 4'b1111
+    } alu_op_t;
+
+
+    localparam LSU_OP_WIDTH     = 4;                // LSU operation select width
+    typedef enum logic [LSU_OP_WIDTH-1:0] {
+        LSU_LB      = 4'b0000,
+        LSU_LH      = 4'b0001,
+        LSU_LW      = 4'b0010,
+        /*reserved 64-bit*/
+        LSU_LBU     = 4'b0100,
+        LSU_LHU     = 4'b0101,
+        /*reserved 64-bit*/
+        /*reserved*/
+        LSU_SB      = 4'b1000,
+        LSU_SH      = 4'b1001,
+        LSU_SW      = 4'b1010,
+        /*reserved 64-bit*/
+        LSU_CSRR    = 4'b1100,
+        LSU_CSRRW   = 4'b1101,
+        LSU_REG     = 4'b1110,
+        LSU_NOP     = 4'b1111
+    } lsu_op_t;
+
+
+    function automatic rv32::word convert_endian(rv32::word data);
+        convert_endian = {data[7:0], data[15:8], data[23:16], data[31:24]};
+    endfunction
+
+    function automatic logic [15:0] convert_endian16(logic [15:0] data);
+        convert_endian16 = {data[7:0], data[15:8]};
+    endfunction
+
+endpackage
+
+`endif //__LEXINGTON_SV

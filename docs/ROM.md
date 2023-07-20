@@ -7,8 +7,8 @@ It features dual asynchronous read ports.
 
 #### Parameters
 
-- **`WIDTH = 32`** data width
-- **`ADDR_WIDTH = 10`** address width (word-addressable, 4kB)
+- **`WIDTH = 32`** data width (from rv32)
+- **`ADDR_WIDTH = 10`** word-addressable address width (default 4kB)
 
 #### Inputs
 

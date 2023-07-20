@@ -40,6 +40,7 @@ module regfile_TB ();
     initial clk = 0;
     initial forever #50 clk = ~clk;
 
+    integer dump_i;
     initial begin
         rs1_addr = 0;
         rs2_addr = 0;
@@ -49,12 +50,13 @@ module regfile_TB ();
 
         fid = $fopen("regfile.log");
         $dumpfile("regfile.vcd");
-        $dumpvars(1, regfile_TB);
+        $dumpvars(3, regfile_TB);
+        $dumpvars(1, DUT.ram[1]);
     end
 
 
     reg [WIDTH-1:0] _d1, _d2;
-    always_ff @(posedge clk) begin
+    always @(posedge clk) begin
         rs2_addr <= rs1_addr;
         rs1_addr <= dest_addr;
         dest_addr <= $random();

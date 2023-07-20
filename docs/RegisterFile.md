@@ -7,12 +7,8 @@ It features asynchronous reads and synchronous writes.
 
 #### Parameters
 
-- **`WIDTH = 32`** data width
-- **`REG_COUNT = 32`** number of registers
-
-**Local Parameters**
-
-- **`ADDR_WIDTH`** = ceil(log2(`REG_COUNT`))
+- **`XLEN = 32`** data width
+- **`ADDR_WIDTH = 5`** = determines the number of registers (from rv32)
 
 #### Inputs
 
@@ -22,12 +18,12 @@ It features asynchronous reads and synchronous writes.
 - **`rs2_addr[ADDR_WIDTH-1:0]`** address for read port 2
 - **`dest_en`** enable for write port
 - **`dest_addr[ADDR_WIDTH-1:0]`** address for write port
-- **`dest_data[WIDTH-1:0]`** data in for write port
+- **`dest_data[XLEN-1:0]`** data in for write port
 
 #### Outputs
 
-- **`rs1_data[WIDTH-1:0]`** data out for read port 1
-- **`rs2_data[WIDTH-1:0]`** data out for read port 2
+- **`rs1_data[XLEN-1:0]`** data out for read port 1
+- **`rs2_data[XLEN-1:0]`** data out for read port 2
 
 ## Behavior
 

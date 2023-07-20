@@ -8,7 +8,7 @@ __Lexington_rom_size = 4K;
 __Lexington_ram_size = 4K;
 
 __Lexington_rom_base = 0x00000000;
-__Lexington_ram_base = 0x80000000;
+__Lexington_ram_base = 0x40000000;
 
 __Lexington_heap_size = DEFINED(__Lexington_heap_size) ? __Lexington_heap_size : 0;
 
@@ -56,8 +56,7 @@ SECTIONS
         *(.rodata)
         /* finish section on word boundary */
         . = ALIGN(4);
-    /*} > rom*/
-    } > ram
+    } > rom
 
     .bss (NOLOAD) : ALIGN(4)
     {
@@ -75,8 +74,7 @@ SECTIONS
         /* finish section on word boundary */
         . = ALIGN(4);
         __data_end = .;
-    /*} > ram AT > rom*/
-    } > ram 
+    } > ram AT > rom
 
     .heap : ALIGN(4)
     {

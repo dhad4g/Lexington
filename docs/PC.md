@@ -4,17 +4,17 @@ This is the program counter to index the current instruction
 
 ## Ports
 
-#### Parameters
+### Parameters
 
-- **`WIDTH = 32`** data width
+- **`XLEN = 32`** data width (from rv32)
 
-#### Inputs
+### Inputs
 
-- **`next_pc[WIDTH-1:0]`** next program counter value
+- **`next_pc[XLEN-1:0]`** next program counter value
 
-### Outputs
+## Outputs
 
-- **`pc[WIDTH-1:0]`** current program counter value
+- **`pc[XLEN-1:0]`** current program counter value
 
 ## Behavior
 

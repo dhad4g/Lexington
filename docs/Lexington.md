@@ -7,7 +7,7 @@ It features a read-only program memory and separate read/write data memory.
 Figure 1 shows a simplified diagram of the CPU core
 
 ![](./figures/Core_BlockDiagram.drawio.svg) \
-**Figure 1.** GPro Lexington simplified core
+**Figure 1.** GPro Lexington minimal core implementation
 
 ## Behavior
 
@@ -46,7 +46,7 @@ Memory must begin at address 0x8000_000 and may be up to 1 GB (default 4 KB).
 - ***Reserved***: This region is reserved for future use
 - **SYSTEM**: This region is for memory mapped system devices such as the system timer `mtime`.
 See [Load/Store specification](./Load_Store.md#memory-mapped-devices) for device addresses.
-- **I/O**: This region is for memory mapped I/O peripherals such as UART.
+- **AXI I/O**: This region is for memory mapped I/O peripherals such as UART.
 See [Load/Store specification](./Load_Store.md#memory-mapped-devices) for device addresses.
 
 ![](./figures/MemoryMap.drawio.svg) \

@@ -1,27 +1,30 @@
 `timescale 1ns/1ps
 
+`include "rv32.sv"
+`include "lexington.sv"
+import lexington::*;
 
-module ROM #(
-        parameter WIDTH         = 32,               // data width
-        parameter ADDR_WIDTH    = 10,               // address width (word-addressable)
-        localparam DEPTH        = 2**ADDR_WIDTH     // number of words in ROM
+
+module rom #(
+        parameter ADDR_WIDTH    = DEFAULT_ROM_ADDR_WIDTH    // word-addressable address bits
     ) (
         // clock not needed; module is asynchronous
         // reset not needed; module is read-only
 
-        input wire  rd_en1,                         // read enable 1
-        input wire  [ADDR_WIDTH-1:0] addr1,         // read address 1 (word-addressable)
-        output wire [WIDTH-1:0] rd_data1,           // read data 1
+        input  logic rd_en1,                                // read enable 1
+        input  logic [ADDR_WIDTH-1:0] addr1,                // read address 1 (word-addressable)
+        output rv32::word rd_data1,                         // read data 1
 
-        input wire  rd_en2,                         // read enable 2
-        input wire  [ADDR_WIDTH-1:0] addr2,         // read address 2 (word-addressable)
-        output wire [WIDTH-1:0] rd_data2,           // read data 2
+        input  logic rd_en2,                                // read enable 2
+        input  logic [ADDR_WIDTH-1:0] addr2,                // read address 2 (word-addressable)
+        output rv32::word rd_data2                          // read data 2
     );
 
-    reg [WIDTH-1:0] data [DEPTH-1:0];
+    localparam DEPTH = 2 ** ADDR_WIDTH;
+    rv32::word data [DEPTH-1:0];
 
     initial begin
-        $readmemb("rom.bin", data, 0, DEPTH-1);
+        $readmemh("rom.hex", data, 0, DEPTH-1);
     end
 
 

@@ -15,21 +15,16 @@ module fetch_TB;
 
     reg  [WIDTH-1:0] pc;
     wire ibus_rd_en;
-    wire [ROM_ADDR_WIDTH-1:0] ibus_rd_addr;
+    wire [ROM_ADDR_WIDTH-1:0] ibus_addr;
     reg  [WIDTH-1:0] ibus_rd_data;
     wire [WIDTH-1:0] inst;
-    wire access_fault;
 
-    fetch #(
-        .WIDTH(WIDTH),
-        .ROM_ADDR_WIDTH(ROM_ADDR_WIDTH)
-    ) FetchUnit (
-        .pc(pc),
-        .ibus_rd_en(ibus_rd_en),
-        .ibus_rd_addr(ibus_rd_addr),
-        .ibus_rd_data(ibus_rd_data),
-        .inst(inst),
-        .access_fault(access_fault)
+    fetch FetchUnit (
+        .pc,
+        .ibus_rd_en,
+        .ibus_addr,
+        .ibus_rd_data,
+        .inst(inst)
     );
 
 
@@ -56,11 +51,9 @@ module fetch_TB;
 
         $write("clk = %d    pc = 0x%h", clk_count, pc);
         $write("    ibus_rd_data = 0x%h", ibus_rd_data);
-        $write("    access_fault = %b", access_fault);
         $fwrite(fid,"clk = %d    pc = 0x%h", clk_count, pc);
         $fwrite(fid,"    ibus_rd_data = 0x%h", ibus_rd_data);
-        $fwrite(fid,"    access_fault = %b", access_fault);
-        if (ibus_rd_addr != pc[(ROM_ADDR_WIDTH+2)-1:2]) begin
+        if (ibus_addr != pc[(ROM_ADDR_WIDTH+2)-1:2]) begin
             fail = fail + 1;
             $write("    incorrect ROM address!");
             $fwrite(fid,"    incorrect ROM address!");
@@ -69,11 +62,6 @@ module fetch_TB;
             fail = fail + 1;
             $write("    incorrect read data!");
             $fwrite(fid,"    incorrect read data!");
-        end
-        if (access_fault != |(pc[WIDTH-1:ROM_ADDR_WIDTH+2])) begin
-            fail = fail + 1;
-            $write("    incorrect access fault detect!");
-            $fwrite(fid,"    incorrect access fault detect!");
         end
         $write("\n");
         $fwrite(fid,"\n");

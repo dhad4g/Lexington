@@ -8,17 +8,17 @@ It is purely combinatorial logic.
 
 ### Parameters
 
-- **`WIDTH=32`** data width
+- **`XLEN=32`** data width (from rv32)
 
 ### Inputs
 
-- **`src1[WIDTH-1:0]`** left-side operand
-- **`src2[WIDTH-1:0]`** right-side operand
+- **`src1[XLEN-1:0]`** left-side operand
+- **`src2[XLEN-1:0]`** right-side operand
 - **`alu_op[3:0]`** operation select
 
 ### Outputs
 
-- **`result[WIDTH-1:0]`** ALU operation result
+- **`result[XLEN-1:0]`** ALU operation result
 - **`zero`** result zero flag
 
 
@@ -53,4 +53,4 @@ The zero output is always set as the bitwise or of all result bits.
 | 4'b1110 | *reserved*  |
 | 4'b1111 | ALU_NOP     | do nothing, pass through `src1` to `result`
 
-*all reserved instructions should act as a NOP*
+*all reserved op codes should act as a NOP*
