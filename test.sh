@@ -22,14 +22,6 @@ ERROR2_FORMAT="s,((FAIL|ERROR):?)(\s)(.*/)([^/]+\.s?v((.?\sLine)?:?\s?[0-9]+)?)(
 OUT_FORMAT="sed -E $SUCCESS_FORMAT;$WARN_FORMAT;$ERROR_FORMAT;$ERROR2_FORMAT"
 
 
-# Check for empty arguments
-if  [ $# -eq 0 ]; then
-    >&2 echo "No arguments provided"
-    usage
-    exit 1
-fi
-
-
 function usage {
     cat <<USAGE_EOF
 
@@ -43,6 +35,14 @@ usage: $SCRIPT_NAME [OPTION]... [MODULE]...
 
 USAGE_EOF
 }
+
+
+# Check for empty arguments
+if  [ $# -eq 0 ]; then
+    >&2 echo "No arguments provided"
+    usage
+    exit 1
+fi
 
 
 function sim() {
@@ -72,6 +72,20 @@ function sim() {
         dependencies[i]="${RTL_SRC_DIR}/${dependencies[$i]}"
         sv_files="$sv_files:${dependencies[$i]}"
         echo "    ${dependencies[$i]}"
+    done
+    echo
+    # execute special commands
+    readarray -t cmds < <(grep --no-filename -E '^//cmd ' "$source" "$testbench" | sed -e 's/^\/\/cmd //' | sed -e "s,\\\${PROJ_DIR},$PROJ_DIR,")
+    for i in "${!cmds[@]}"; do
+        echo "${cmds[$i]}"
+        $SHELL -c "${cmds[$i]}" # run each cmd in it's own subshell
+        rval=$PIPESTATUS
+        echo
+        if [ "$rval" != "0" ]; then
+            >&2 echo -e "${RED}FAIL: User command failed with exit code $rval"
+            >&2 echo
+            return $rval
+        fi
     done
     echo
     # compile

@@ -29,10 +29,9 @@ However, trap CSR operations are delegated to the trap unit using combinatorial 
 - **`clk`** processor clock
 - **`rst_n`** active-low synchronous reset
 - **`rd_en`** read enable
-- **`rd_addr[CSR_ADDR_WIDTH-1:0]`** read address
 - **`explicit_rd`** flag indicating explicit CSR read (ignored in this implementation)
 - **`wr_en`** write enable
-- **`wr_addr[CSR_ADDR_WIDTH-1:0]`** write address
+- **`addr[CSR_ADDR_WIDTH-1:0]`** read address
 - **`wr_data[XLEN-1:0]`** write data
 - **`trap_rd_data[XLEN-1:0]`** read data for trap CSRs
 - **`time_rd_data[63:0]`** read-only unprivileged time and timeh CSRs
@@ -164,8 +163,8 @@ Figures 2 and 3 show the encoding of `mstatus` and `mstatush` respectively.
 | 21    | TW    | r/- | 0 | ~~Timeout wait~~ |
 | 22    | TSR   | r/- | 0 | ~~Trap SRET~~ |
 | 31    | SD    | r/- | 0 | ~~Extensions state summary~~ |
-| 36    | SBE   | r/- | 0 | ~~Supervisor-mode data memory endianness~~ |
-| 37    | MBE   | r/w | 0 | Manager-mode data memory endianness (0=little,1=big) |
+| 36 (4)| SBE   | r/- | 0 | ~~Supervisor-mode data memory endianness~~ |
+| 37 (5)| MBE   | r/w | 0 | Manager-mode data memory endianness (0=little,1=big) |
 
 When a trap is taken:
 - `MPIE` is set to `MIE`
@@ -175,12 +174,14 @@ When a trap is taken:
 When an `MRET` instruction is executed:
 - `MIE` is set to `MPIE`
 - `MPIE` is set to 1
-- ~~`MPP` is set to 3 (i.e. machine-mode, only supported mode)~~ *Unused*
+- ~~`MPP` is set to 3 (i.e. machine-mode)~~ *Unused*
 
 
 ### Machine Trap-Vector Base-Address Register `mtvec`
 
 *0x305*
+
+***Delegated to Trap Unit***
 
 This read/write register contains the address of the trap handler function.
 All addresses are forced to be 4-byte aligned and the address's 2 LSBs are ignored.
@@ -196,8 +197,7 @@ The default value on reset is 0x0.
 | --- | --- | --- |
 | 0 | Direct | All traps set PC to BASE |
 | 1 | Vectored | Asynchronous interrupts set PC to BASE+(4*cause) |
-| $
-ge$2 | - | *Reserved* |
+| >=2 | - | *Reserved* |
 
 If using vectored mode, the 5 LSBs of BASE are zeroed, thus forcing 128-byte alignment of the trap-vector table.
 This allows interrupt causes 0-31 to use the vectored addressing mode.
@@ -211,6 +211,8 @@ Reset and NMIs always trap to address 0x0000_0000.
 ### Machine Interrupt Pending `mip`
 
 *0x344*
+
+***Delegated to Trap Unit***
 
 This read/write register encodes pending interrupts.
 Bit *i* corresponds to interrupt cause number *i* as reported in CSR [`mcause`](#machine-cause-register-mcause).
@@ -254,6 +256,8 @@ See the [Trap Unit](./Trap.md) for detailed trap behavior.
 
 *0x304*
 
+***Delegated to Trap Unit***
+
 This read/write register encodes the enable for interrupts.
 Bit *i* corresponds to interrupt cause number *i* as reported in the [`mcause` CSR](#machine-cause-register-mcause).
 All bits are writable, even if the corresponding interrupt is not supported.
@@ -269,7 +273,6 @@ unprivileged: *0xC00* and *0xC80*
 
 Counts the number of clock cycles executed by this hart.
 A 64-bit, read/write register with value zero at reset.
-The value is not incremented on cycles where a CSR write occurs.
 The `cycle` CSR is a read-only shadow of the unprivileged `mcycle`.
 
 The following code is an example of reading 64-bit performance counters:
@@ -319,6 +322,8 @@ A general-purpose read/write register for use by machine mode.
 
 *0x341*
 
+***Delegated to Trap Unit***
+
 This read/write register holds the address of instruction that was interrupted or caused an exception when a trap is encountered in machine mode.
 See the [Trap Unit](./Trap.md) for detailed trap behavior.
 This implementation uses `IALIGN`=32 and thus the least significant two bits are always zero and write values to these bits are ignored.
@@ -327,6 +332,8 @@ This implementation uses `IALIGN`=32 and thus the least significant two bits are
 ### Machine Cause Register `mcause`
 
 *0x342*
+
+***Delegated to Trap Unit***
 
 This read/write register encodes the event type that caused a trap.
 Only legal values are allowed to be written.
@@ -345,12 +352,16 @@ See the [Trap Unit](./Trap.md) for detailed trap behavior.
 | 7  | Machine timer interrupt |
 | 9  | ~~Supervisor external interrupt~~ |
 | 11 | ~~Machine external interrupt~~ |
-| 16 | GPIO interrupt 0 |
-| 17 | GPIO interrupt 1 |
-| 18 | UART0 RX interrupt |
-| 19 | UART0 TX interrupt |
-| 20 | timer0 interrupt |
-| 21 | timer1 interrupt |
+| 16 | UART0 RX interrupt |
+| 17 | UART0 TX interrupt |
+| 18 | timer0 interrupt |
+| 19 | timer1 interrupt |
+| 20 | GPIOA interrupt 0 |
+| 21 | GPIOA interrupt 1 |
+| 22 | GPIOB interrupt 0 |
+| 23 | GPIOB interrupt 1 |
+| 24 | GPIOC interrupt 0 |
+| 25 | GPIOC interrupt 1 |
 
 **Table 7.** Exception trap codes
 
@@ -376,6 +387,8 @@ See the [Trap Unit](./Trap.md) for detailed trap behavior.
 
 *0x343*
 
+***Delegated to Trap Unit***
+
 This read/write register contains exception-specific information.
 See the [Trap Unit](./Trap.md) for details.
 
@@ -387,6 +400,8 @@ See the [Trap Unit](./Trap.md) for details.
 This is a read-only zero register indicating that a configuration data structure does not exist.
 
 ### Machine Timer Registers `mtime` and `mtimecmp`
+
+***Delegated to mtime Unit***
 
 These are 64-bit, memory-mapped registers.
 `mtime` and `mtimeh` are also available as read-only, unprivileged CSRs `time` and `timeh` respectively.

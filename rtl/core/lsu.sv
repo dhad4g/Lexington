@@ -28,6 +28,8 @@ module lsu #(
         output rv32::word dbus_addr,                            // memory read address (byte-addressable)
         output rv32::word dbus_wr_data,                         // memory write data
         output logic [(rv32::XLEN/8)-1:0] dbus_wr_strobe,       // write strobes, indicate which byte lanes hold valid data
+        input  logic dbus_wait,                                 // asserted if DBus requires additional cycle(s) to complete transaction
+        input  logic dbus_err,                                  // if asserted, operation is aborted
 
         // CSR write port
         output logic csr_wr_en,                                 // CSR write enable
@@ -152,6 +154,10 @@ module lsu #(
                 csr_wr_en  = 0;
             end
         endcase
+        if (dbus_wait | dbus_err) begin
+            // override register file write enable
+            dest_en     = 0;
+        end
     end
 
 

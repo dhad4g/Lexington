@@ -6,7 +6,8 @@ import lexington::*;
 
 
 module decoder #(
-        parameter USE_CSR = 1                       // CSR instructions can be disables
+        parameter USE_CSR       = 1,                // CSR instructions can be disables
+        parameter USE_TRAP      = 1                 // enable generation of the Trap Unit (requires CSR)
     ) (
         // clock not needed; module is purely combinatorial
         // reset not needed; module is stateless
@@ -19,7 +20,7 @@ module decoder #(
         output logic rs1_en,                        // register source 1 enable
         output rv32::reg_addr_t rs1_addr,           // register source 1 address
         input  rv32::word rs1_data,                 // register source 1 data
-        output logic rs2_en,                         // register source 2 enable
+        output logic rs2_en,                        // register source 2 enable
         output rv32::reg_addr_t rs2_addr,           // register source 2 address
         input  rv32::word rs2_data,                 // register source 2 data
 
@@ -39,7 +40,6 @@ module decoder #(
         output lsu_op_t lsu_op,                     // LSU operation select
         output rv32::word alt_data,                 // LSU alternate data
         output rv32::reg_addr_t dest_addr,          // LSU destination register address
-        input  logic dbus_wait,                     // DBus wait signal, suspend until DBus op completes
 
         // Exception Flags
         output logic illegal_inst,                  // illegal instruction flag
@@ -438,13 +438,22 @@ module decoder #(
                         illegal_inst = 1;
                     end
                     else begin
-                        case (funct12)
-                            FUNCT12_ECALL:  ecall = 1;
-                            FUNCT12_EBREAK: ebreak = 1;
-                            FUNCT12_MRET:   mret = 1;
-                            FUNCT12_WFI:    ; // NOP
-                            default:        illegal_inst = 1;
-                        endcase
+                        if (USE_TRAP) begin
+                            case (funct12)
+                                FUNCT12_ECALL:  ecall = 1;
+                                FUNCT12_EBREAK: ebreak = 1;
+                                FUNCT12_MRET:   mret = 1;
+                                FUNCT12_WFI:    ; // NOP
+                                default:        illegal_inst = 1;
+                            endcase
+                        end
+                        else begin
+                            case (funct12)
+                                FUNCT12_EBREAK: ebreak = 1;     // leave for simulation verification purposes
+                                FUNCT12_WFI:    ; // NOP
+                                default:        illegal_inst = 1;
+                            endcase
+                        end
                     end
                 end // if (funct3 == 3'b000)
                 else if (USE_CSR) begin

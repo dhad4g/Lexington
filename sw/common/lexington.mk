@@ -68,25 +68,25 @@ LD_LIBS = -lm -lc -lgcc
 
 
 # Targets
-build:          $(APP_HEX)
-disassemble:    $(DUMP)
+build: $(APP_HEX)
+dump:  $(DUMP)
 
 
-$(APP_ELF):
-	@$(CC) $(CC_OPTS) -T $(LD_SCRIPT) $(SRC) $(LD_LIBS) -o $@
+$(APP_ELF): $(SRC)
+	$(CC) $(CC_OPTS) -T $(LD_SCRIPT) $(SRC) $(LD_LIBS) -o $@
 
 
 $(APP_BIN): $(APP_ELF)
 	@$(OBJCOPY) -I elf32-little $< -j .text   -O binary text.bin
 	@$(OBJCOPY) -I elf32-little $< -j .rodata -O binary rodata.bin
 	@$(OBJCOPY) -I elf32-little $< -j .data   -O binary data.bin
-	@cat text.bin rodata.bin data.bin > $@
+	cat text.bin rodata.bin data.bin > $@
 	@rm -f text.bin rodata.bin data.bin
 
 
 $(APP_HEX): $(APP_BIN)
-	@python3 $(MAKE_HEX) $< 1024 > $@
+	python3 $(MAKE_HEX) $< 1024 > $@
 
 
 $(DUMP): $(APP_ELF)
-	@$(OBJDUMP) -d $< > $@
+	$(OBJDUMP) -d $< > $@

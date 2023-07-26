@@ -7,30 +7,34 @@ The AXI4-Lite Crossbar connects multiple subordinates to a single manager.
 
 ### Parameters
 
-- **`WIDTH = 32`** data width
-- **`ADDR_WIDTH = 32`** address width
+- **`WIDTH = 32`** data bus width
+- **`ADDR_WIDTH = 32`** upstream manager address width
+- **`COUNT = 2`** number of downstream subordinates
+- **`S_ADDR_WIDTH = [4,4]`** array of downstream subordinate address widths
+- **`S_BASE_ADDR = [0x0000_0000,0x0000_0010]`** array of downstream subordinate base addresses
+
+***Important:** address spaces must not overlap!*
 
 ### Inputs
 
-- **`axi_crossbar_s`** subordinate interface to connect to upstream manager
+- **`axi_s`** subordinate interface to connect to upstream manager
 
 ### Outputs
 
-- **`axi_crossbar_m01`** manager interface to connect to downstream subordinate 1
-- **`axi_crossbar_m02`** manager interface to connect to downstream subordinate 2
-- **`axi_crossbar_m03`** manager interface to connect to downstream subordinate 3
-- **`axi_crossbar_m04`** manager interface to connect to downstream subordinate 4
-
+- **`axi_mx[COUNT-1:0]`** manager interface to connect to downstream subordinate *x*
 
 ## Behavior
 
-**TODO**
+The AXI4-Lite crossbar decodes address from the upstream manager an routes transactions to the appropriate downstream subordinate.
 
 ### Memory Map
 
 **Table 1.** Memory Mapped I/O
-| Address | Device | Description |
-| --- | --- | --- |
-| 0xFFFF_FF00 | `timer0` |
-| 0xFFFF_FF04 | `timer1` |
+| Address | Device |
+| --- | --- |
+| 0xFFFF_FF00 - 0xFFFF_FF0F | `timer0` |
+| 0xFFFF_FF10 - 0xFFFF_FF1F | `timer1` |
+| 0xFFFF_FF70 - 0xFFFF_FF7F | `uart0` |
 | 0xFFFF_FFA0 - 0xFFFF_FFAF | `GPIOA` |
+| 0xFFFF_FFB0 - 0xFFFF_FFBF | `GPIOB` |
+| 0xFFFF_FFB0 - 0xFFFF_FFCF | `GPIOC` |

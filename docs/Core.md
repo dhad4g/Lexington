@@ -51,6 +51,10 @@ The following are optional features of the core that can be disabled via paramet
 *interrupt flags*
 - **`gpioa_int_0`** GPIOA interrupt 0
 - **`gpioa_int_1`** GPIOA interrupt 1
+- **`gpiob_int_0`** GPIOA interrupt 0
+- **`gpiob_int_1`** GPIOA interrupt 1
+- **`gpioc_int_0`** GPIOA interrupt 0
+- **`gpioc_int_1`** GPIOA interrupt 1
 - **`uart0_rx_int`** UART0 RX interrupt
 - **`uart0_tx_int`** UART0 TX interrupt
 - **`timer0_int`** timer0 interrupt

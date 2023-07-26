@@ -54,7 +54,7 @@ module core #(
         output logic [AXI_ADDR_WIDTH-1:0] axi_addr,                 // DBus
         input  rv32::word axi_rd_data,                              // DBus
         input  logic axi_access_fault,                              // DBus
-        input  logic axi_wait,                                      // DBus
+        input  logic axi_busy,                                      // DBus
 
         output rv32::word wr_data,                                  // share write data
         output logic [(rv32::XLEN/8)-1:0] wr_strobe,                // share write strobe
@@ -62,6 +62,10 @@ module core #(
         // Interrupt flags
         input  logic gpioa_int_0,                                   // GPIOA interrupt 0
         input  logic gpioa_int_1,                                   // GPIOA interrupt 1
+        input  logic gpiob_int_0,                                   // GPIOA interrupt 0
+        input  logic gpiob_int_1,                                   // GPIOA interrupt 1
+        input  logic gpioc_int_0,                                   // GPIOA interrupt 0
+        input  logic gpioc_int_1,                                   // GPIOA interrupt 1
         input  logic uart0_rx_int,                                  // UART0 RX interrupt
         input  logic uart0_tx_int,                                  // UART0 TX interrupt
         input  logic timer0_int,                                    // timer0 interrupt
@@ -86,6 +90,7 @@ module core #(
     rv32::word dbus_wr_data;
     logic [(rv32::XLEN/8)-1:0] dbus_wr_strobe;
     logic dbus_wait;
+    logic dbus_err;
     // PC
     rv32::word pc;
     rv32::word next_pc;
@@ -118,10 +123,9 @@ module core #(
     logic trap_rd_en;
     logic trap_wr_en;
     rv32::word trap_rd_data;
-    rv32::word trap_wr_data;
     // Control signals
-    logic endianness;
     logic global_mie;
+    logic endianness;
     logic mret;
     logic trap;
     // Machine Timer
@@ -129,6 +133,7 @@ module core #(
     logic mtime_wr_en;
     logic [MTIME_ADDR_WIDTH-1:0] mtime_addr;
     rv32::word mtime_rd_data;
+    logic [63:0] time_rd_data;  // unprivileged alias
     logic mtime_int;
     // Exceptions
     logic inst_access_fault;
@@ -184,7 +189,7 @@ module core #(
             .mtime_rd_data,
             .axi_rd_data,
             .axi_access_fault,
-            .axi_wait,
+            .axi_busy,
             .rd_data(dbus_rd_data),
             .rom_rd_en(rom_rd_en2),
             .rom_addr(rom_addr2),
@@ -202,7 +207,8 @@ module core #(
             .data_misaligned,
             .data_access_fault,
             .load_store_n,
-            .dbus_wait
+            .dbus_wait,
+            .dbus_err
         );
     ////////////////////////////////////////////////////////////
     // END: Memory Bus Instantiations
@@ -254,7 +260,8 @@ module core #(
             .inst
         );
     decoder #(
-            .USE_CSR(USE_CSR)
+            .USE_CSR(USE_CSR),
+            .USE_TRAP(USE_TRAP)
         ) Decoder_inst (
             .inst,
             .pc,
@@ -262,7 +269,6 @@ module core #(
             .rs2_data,
             .csr_rd_data,
             .alu_zero,
-            .dbus_wait,
             .rs1_en,
             .rs2_en,
             .rs1_addr,
@@ -296,6 +302,8 @@ module core #(
             .alt_data,
             .dest_addr,
             .dbus_rd_data,
+            .dbus_wait,
+            .dbus_err,
             .endianness,
             .dest_en,
             .dest_data,
@@ -327,21 +335,21 @@ module core #(
                 .clk,
                 .rst_n,
                 .rd_en(csr_rd_en),
-                .rd_addr(csr_addr),
                 .explicit_rd(csr_explicit_rd),
                 .wr_en(csr_wr_en),
-                .wr_addr(csr_addr),
-                .wr_data(csr_wr_data),
-                .trap_rd_data,
-                .time_rd_data,
-                .trap,
+                .addr(csr_addr),
                 .rd_data(csr_rd_data),
-                .global_mie,
+                .wr_data(csr_wr_data),
                 .trap_rd_en,
                 .trap_wr_en,
-                .trap_wr_data,
+                .trap_rd_data,
+                .time_rd_data,
+                .global_mie,
                 .endianness,
-                .illegal_csr
+                .illegal_csr,
+                .dbus_wait,
+                .mret,
+                .trap
             );
     end // if (USE_CSR)
     else begin
@@ -395,6 +403,10 @@ module core #(
                 .mtime_int,
                 .gpioa_int_0,
                 .gpioa_int_1,
+                .gpiob_int_0,
+                .gpiob_int_1,
+                .gpioc_int_0,
+                .gpioc_int_1,
                 .uart0_rx_int,
                 .uart0_tx_int,
                 .timer0_int,
@@ -439,6 +451,7 @@ module core #(
     else begin
     end // if/else (USE_MTIME)
         assign mtime_rd_data = 0;
+        assign time_rd_data = 0;
         assign mtime_int = 0;
     endgenerate
     ////////////////////////////////////////////////////////////

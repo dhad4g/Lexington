@@ -1,5 +1,7 @@
 //depend rom.sv
 //depend ram.sv
+//cmd cd ${PROJ_DIR}/sw/examples/core_test && make
+//cmd cp ${PROJ_DIR}/sw/examples/core_test/rom.hex .
 `timescale 1ns/1ps
 
 `include "rv32.sv"
@@ -9,10 +11,13 @@ import lexington::*;
 
 module core_TB;
 
-    localparam MAX_CYCLES = 128;
+    localparam MAX_CYCLES = 1024;
     integer clk_count = 0;
     integer fail = 0;
     integer fid;
+
+    localparam SUCCESS_CODE     = 'h0D15EA5E; // zero disease
+    localparam FAIL_CODE        = 'hDEADBEEF;
 
     // DUT Parameters
     parameter ROM_ADDR_WIDTH    = DEFAULT_ROM_ADDR_WIDTH;       // ROM address width (word-addressable, default 4kB)
@@ -24,7 +29,7 @@ module core_TB;
     parameter AXI_BASE_ADDR     = DEFAULT_AXI_BASE_ADDR;        // AXI bus address space base (must be aligned to AXI address space)
     parameter HART_ID           = 0;                            // hardware thread id (see mhartid CSR)
     parameter RESET_ADDR        = DEFAULT_RESET_ADDR;           // program counter reset/boot address
-    parameter USE_CSR           = 0;                            // enable generation of the CSR module
+    parameter USE_CSR           = 1;                            // enable generation of the CSR module
     parameter USE_TRAP          = 0;                            // enable generation of the Trap Unit (requires CSR)
     parameter USE_MTIME         = 0;                            // enable generation of machine timer address space
     parameter USE_AXI           = 0;                            // enable generation of AXI address space
@@ -50,12 +55,16 @@ module core_TB;
     logic [AXI_ADDR_WIDTH-1:0] axi_addr;                // DBus
     rv32::word axi_rd_data;                             // DBus
     logic axi_access_fault;                             // DBus
-    logic axi_wait;                                     // DBus
+    logic axi_busy;                                     // DBus
     rv32::word wr_data;                                 // shared write data
     logic [(rv32::XLEN/8)-1:0] wr_strobe;               // shared write strobe
     // Interrupt flags
     logic gpioa_int_0;                                  // GPIOA interrupt 0
     logic gpioa_int_1;                                  // GPIOA interrupt 1
+    logic gpiob_int_0;                                  // GPIOA interrupt 0
+    logic gpiob_int_1;                                  // GPIOA interrupt 1
+    logic gpioc_int_0;                                  // GPIOA interrupt 0
+    logic gpioc_int_1;                                  // GPIOA interrupt 1
     logic uart0_rx_int;                                 // UART0 RX interrupt
     logic uart0_tx_int;                                 // UART0 TX interrupt
     logic timer0_int;                                   // timer0 interrupt
@@ -100,11 +109,15 @@ module core_TB;
         .axi_addr,
         .axi_rd_data,
         .axi_access_fault,
-        .axi_wait,
+        .axi_busy,
         .wr_data,
         .wr_strobe,
         .gpioa_int_0,
         .gpioa_int_1,
+        .gpiob_int_0,
+        .gpiob_int_1,
+        .gpioc_int_0,
+        .gpioc_int_1,
         .uart0_rx_int,
         .uart0_tx_int,
         .timer0_int,
@@ -149,10 +162,14 @@ module core_TB;
         // AXI (unused)
         axi_rd_data = 0;
         axi_access_fault = 0;
-        axi_wait = 0;
+        axi_busy = 0;
         // interrupts (unused)
         gpioa_int_0 = 0;
         gpioa_int_1 = 0;
+        gpiob_int_0 = 0;
+        gpiob_int_1 = 0;
+        gpioc_int_0 = 0;
+        gpioc_int_1 = 0;
         uart0_rx_int = 0;
         uart0_tx_int = 0;
         timer0_int = 0;
@@ -169,8 +186,45 @@ module core_TB;
     end
 
 
-    // Stimulus
+    // Verification
     always @(posedge clk) begin
+        if (rst) begin
+
+        end
+        else begin
+            if (DUT.ebreak) begin
+                // Environment Break
+                case (DUT.RegFile_inst.data[10])
+                    SUCCESS_CODE: begin
+                        $write("Reached success state");
+                        $write("\n\nPASSED all tests\n");
+                        $fwrite(fid,"Reached success state");
+                        $fwrite(fid,"\n\nPASSED all tests\n");
+                        $finish();
+                    end
+                    FAIL_CODE: begin
+                        $write("\n\nReached FAILED state\n");
+                        $fwrite(fid,"\n\nReached FAILED state\n");
+                        $fclose(fid);
+                        $finish();
+                    end
+                    default: begin // confirm x10 == x11
+                        if (DUT.RegFile_inst.data[10] == DUT.RegFile_inst.data[11]) begin
+                            $write("check passed, called from 0x%h\n", DUT.RegFile_inst.data[1]-4);
+                            $fwrite(fid,"check passed, called from 0x%h\n", DUT.RegFile_inst.data[1]-4);
+                        end
+                        else begin
+                            fail <= fail + 1;
+                            $write("\n\nCheck FAILED, called from 0x%h\n", DUT.RegFile_inst.data[1]-4);
+                            $fwrite(fid,"\n\nCheck FAILED, called from 0x%h\n", DUT.RegFile_inst.data[1]-4);
+                            // continue running other tests
+                            //$fclose(fid);
+                            //$finish();
+                        end
+                    end
+                endcase
+            end
+        end
     end
 
 
@@ -183,8 +237,10 @@ module core_TB;
                 $fwrite(fid,"\n\nFailed %d tests\n", fail);
             end
             else begin
-                $write("\n\nPASSED all tests\n");
-                $fwrite(fid,"\n\nPASSED all tests\n");
+                //$write("\n\nPASSED all tests\n");
+                //$fwrite(fid,"\n\nPASSED all tests\n");
+                $write("\n\nFAILED, never reached success state\n");
+                $fwrite(fid,"\n\nFAILED, never reached success state\n");
             end
             $fclose(fid);
             $finish();

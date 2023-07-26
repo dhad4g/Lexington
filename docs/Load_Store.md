@@ -27,6 +27,8 @@ This implementation uses purely combinatorial logic
 - **`alt_data[XLEN-1:0]`** data source for store and CSR read instructions
 - **`dest_addr[REG_ADDR_WIDTH-1:0]`** destination register
 - **`dbus_rd_data[XLEN-1:0]`** data from memory
+- **`dbus_wait`** asserted if DBus requires additional cycle(s) to complete transaction
+- **`dbus_err`** if asserted, operation is aborted
 - **`endianness`** data memory endianness (0=little,1=big)
 
 #### Outputs
@@ -47,6 +49,8 @@ This implementation uses purely combinatorial logic
 The `lsu_op` signal controls the operation of the LSU.
 Control encoding is shown in Table 1.
 The output truth table is shown in Table 2.
+
+***Important:** If `dbus_wait` or `dbus_err` is asserted then `dest_en` must be kept LOW to avoid multiple or erroneous register writes.*
 
 *Note: CSR address is handled by decode*
 
