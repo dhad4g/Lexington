@@ -67,7 +67,7 @@ module decoder #(
     // Funct7 and Funct3 Field Values
     localparam FUNCT7_ZERO      = 7'b000_0000;
     localparam FUNCT7_BIT30     = 7'b010_0000;
-    // arithemetic and logic instructions funct3
+    // arithmetic and logic instructions funct3
     localparam FUNCT3_ADD_SUB   = 3'b000;
     localparam FUNCT3_SHIFT_L   = 3'b001;
     localparam FUNCT3_SLT       = 3'b010;
@@ -83,7 +83,7 @@ module decoder #(
     localparam FUNCT3_BGE       = 3'b101;
     localparam FUNCT3_BLTU      = 3'b110;
     localparam FUNCT3_BGEU      = 3'b111;
-    // load/store unstruction funct3
+    // load/store instruction funct3
     localparam FUNCT3_LB        = 3'b000;
     localparam FUNCT3_LH        = 3'b001;
     localparam FUNCT3_LW        = 3'b010;
@@ -123,6 +123,8 @@ module decoder #(
     assign funct12      = inst[31:20];
     assign csr_addr     = inst[31:20];  // output port
 
+    assign inst_misaligned = |(next_pc[1:0]);
+
     // Decode immediate value
     logic [31:0] immediate;
     always_comb begin
@@ -141,7 +143,6 @@ module decoder #(
 
     always_comb begin
         // defaults for exception flags, overwrite per instruction
-        inst_misaligned = |(next_pc[1:0]);
         illegal_inst = 0;
         ecall = 0;
         ebreak = 0;
@@ -285,7 +286,7 @@ module decoder #(
                     next_pc     = pc + immediate;
                 end
                 else begin // JALR
-                    // sign-extended immediate, lowet bit zeroed after calculation
+                    // sign-extended immediate, lowest bit zeroed after calculation
                     next_pc[31:1] = (rs1_data + immediate) >> 1;
                     next_pc[0]    = 0;
                 end
@@ -340,7 +341,7 @@ module decoder #(
 
             ////////////////////////////////////////////////////////////
             ////////////////////////////////////////////////////////////
-            // BEGIN: LOAD/STORE Instuctions
+            // BEGIN: LOAD/STORE Instructions
             ////////////////////////////////////////////////////////////
             LOAD, STORE: begin
                 next_pc         = pc + 4;
@@ -378,7 +379,7 @@ module decoder #(
                 end
             end
             ////////////////////////////////////////////////////////////
-            // END: LOAD/STORE Instuctions
+            // END: LOAD/STORE Instructions
             ////////////////////////////////////////////////////////////
 
 

@@ -44,6 +44,17 @@ if  [ $# -eq 0 ]; then
     exit 1
 fi
 
+# Function for WSL support
+function special_exec () {
+    which powershell.exe > /dev/null
+    if [ "$?" == "0" ]; then
+        args=$(echo "$@" | sed -e 's,/mnt/c/,C:/,g')
+        "/mnt/c/Program Files/Git/bin/bash.exe" -c "$args"
+    else
+        $@
+    fi
+}
+
 
 function sim() {
     if [ $# -eq 0 ]; then
@@ -65,20 +76,22 @@ function sim() {
     fi
     mkdir -p "build/sim/$module_path"
     cd "build/sim/$module_path"
+
     # find dependencies
-    dependencies=($(grep --no-filename -E '^//depend ' "$source" "$testbench" | sed -e 's/^\/\/depend //' ))
-    sv_files="$source:$testbench"
+    readarray -t dependencies < <(grep --no-filename -E '^//depend ' "$source" "$testbench" | sed -e 's/^\/\/depend //' )
+    sv_files="$source $testbench"
     for i in "${!dependencies[@]}"; do
         dependencies[i]="${RTL_SRC_DIR}/${dependencies[$i]}"
-        sv_files="$sv_files:${dependencies[$i]}"
+        sv_files="$sv_files ${dependencies[$i]}"
         echo "    ${dependencies[$i]}"
     done
     echo
+
     # execute special commands
-    readarray -t cmds < <(grep --no-filename -E '^//cmd ' "$source" "$testbench" | sed -e 's/^\/\/cmd //' | sed -e "s,\\\${PROJ_DIR},$PROJ_DIR,")
+    readarray -t cmds < <(grep --no-filename -E '^//cmd ' "$source" "$testbench" | sed -e 's/^\/\/cmd //' | sed -e "s,\\\${PROJ_DIR},$PROJ_DIR,g")
     for i in "${!cmds[@]}"; do
         echo "${cmds[$i]}"
-        $SHELL -c "${cmds[$i]}" # run each cmd in it's own subshell
+        bash -c "${cmds[$i]}" # run each cmd in it's own subshell
         rval=$PIPESTATUS
         echo
         if [ "$rval" != "0" ]; then
@@ -88,11 +101,10 @@ function sim() {
         fi
     done
     echo
+
     # compile
-    #xvlog $XVLOG_OPTIONS $dependencies $source $testbench | $OUT_FORMAT
-    xvlog $XVLOG_OPTIONS $sv_files | $OUT_FORMAT
+    special_exec xvlog $XVLOG_OPTIONS $sv_files | $OUT_FORMAT
     rval=$PIPESTATUS
-    #rval=$?
     if [ "$rval" == "0" ]; then
         echo
         echo -e "${BLUE}Compile for $module_path complete${NORMAL}"
@@ -104,8 +116,9 @@ function sim() {
         >&2 echo
         return $rval
     fi
+
     # elaborate
-    xelab -debug typical -s sim ${module}_TB | $OUT_FORMAT
+    special_exec xelab -debug typical -s sim ${module}_TB | $OUT_FORMAT
     rval=$PIPESTATUS
     if [ "$rval" = "0" ]; then
         echo
@@ -118,11 +131,12 @@ function sim() {
         >&2 echo
         return $rval
     fi
+
     # simulate
     if $check_only; then
         return $rval
     else
-        xsim --runall sim | $OUT_FORMAT
+        special_exec xsim --runall sim | $OUT_FORMAT
         rval=$PIPESTATUS
         if [ "$rval" = "0" ]; then
             #echo -e "${BLUE}Simulate for $module complete${NORMAL}"

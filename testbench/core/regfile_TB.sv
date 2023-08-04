@@ -51,7 +51,6 @@ module regfile_TB ();
         fid = $fopen("regfile.log");
         $dumpfile("regfile.vcd");
         $dumpvars(3, regfile_TB);
-        $dumpvars(1, DUT.ram[1]);
     end
 
 

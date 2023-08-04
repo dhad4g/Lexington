@@ -10,13 +10,18 @@ package lexington;
     localparam DEFAULT_RAM_ADDR_WIDTH   = 10;               // word-addressable RAM address bits
     localparam DEFAULT_AXI_ADDR_WIDTH   = 29;               // byte-addressable AXI address space bits
     localparam MTIME_ADDR_WIDTH         = 4;                // byte-addressable machine timer address bits
+    localparam GPIO_ADDR_WIDTH          = 4;                // byte-addressable GPIO address bits
 
-    // The following addresses are byte-addressable 32-bit address space
+    // The following addresses are byte-addressable in the 32-bit address space
     localparam DEFAULT_RESET_ADDR       = 32'h0000_0000;    // program counter reset/boot address
     localparam DEFAULT_ROM_BASE_ADDR    = 32'h0000_0000;    // must be aligned to ROM size
     localparam DEFAULT_RAM_BASE_ADDR    = 32'h4000_0000;    // must be aligned to RAM size
     localparam DEFAULT_MTIME_BASE_ADDR  = 32'hC000_0000;    // see CSR documentation
     localparam DEFAULT_AXI_BASE_ADDR    = 32'hE000_0000;    // must be aligned to AXI address space
+    localparam GPIOA_BASE_ADDR          = 32'hFFFF_FFA0;    // GPIOA
+    localparam GPIOB_BASE_ADDR          = 32'hFFFF_FFB0;    // GPIOB
+    localparam GPIOC_BASE_ADDR          = 32'hFFFF_FFC0;    // GPIOC
+
     localparam DEFAULT_AXI_TIMEOUT      = 17;               // bus timeout in number of cycles
 
 
@@ -60,6 +65,48 @@ package lexington;
         LSU_REG     = 4'b1110,
         LSU_NOP     = 4'b1111
     } lsu_op_t;
+
+
+    // Implementation Specific Interrupts
+    localparam TRAP_CODE_UART0RX                = 16;       // UART 0 RX interrupt
+    localparam TRAP_CODE_UART0TX                = 17;       // UART 0 TX interrupt
+    localparam TRAP_CODE_TIM0                   = 18;       // general-purpose timer 0 interrupt
+    localparam TRAP_CODE_TIM1                   = 19;       // general-purpose timer 1 interrupt
+    localparam TRAP_CODE_GPIOA0                 = 20;       // GPIO A interrupt 0
+    localparam TRAP_CODE_GPIOA1                 = 21;       // GPIO A interrupt 1
+    localparam TRAP_CODE_GPIOB0                 = 22;       // GPIO B interrupt 0
+    localparam TRAP_CODE_GPIOB1                 = 23;       // GPIO B interrupt 1
+    localparam TRAP_CODE_GPIOC0                 = 24;       // GPIO C interrupt 0
+    localparam TRAP_CODE_GPIOC1                 = 25;       // GPIO C interrupt 1
+
+
+    // Interrupt CSR typedef
+    typedef struct packed {
+        logic [5:0] reserved31_26;
+        logic GPIOC1;
+        logic GPIOC0;
+        logic GPIOB1;
+        logic GPIOB0;
+        logic GPIOA1;
+        logic GPIOA0;
+        logic TIM1;
+        logic TIM0;
+        logic UART0TX;
+        logic UART0RX;
+        logic [3:0] reserved15_12;
+        logic MEI;
+        logic reserved10;
+        logic SEI;
+        logic reserved8;
+        logic MTI;
+        logic reserved6;
+        logic STI;
+        logic reserved4;
+        logic MSI;
+        logic reserved2;
+        logic SSI;
+        logic reserved0;
+    } interrupt_csr_t;
 
 
     function automatic rv32::word convert_endian(rv32::word data);

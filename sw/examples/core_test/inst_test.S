@@ -4,7 +4,7 @@
 .global inst_test
 .global check
 .global error
-.global success
+.global done
 
 // Important: all registers should contain their index (i.e. x21 = 21) except:
 //  - x1: link register/return address (alias ra)
@@ -15,10 +15,14 @@
 
 // Instruction test funcion
 inst_test:
-    addi    sp, sp, -8
-    sw      ra, 4(sp)       // push return address
+    csrw    mie, 0          // disable all interrupt sources
+    addi    sp, sp, -12
+    sw      ra, 8(sp)       // push return address
     csrr    ra, mscratch
-    sw      ra, 0(sp)       // push mscratch
+    sw      ra, 4(sp)       // push mscratch
+    csrr    ra, mtvec
+    sw      ra, 0(sp)       // push mtvec
+
     csrw    mscratch, x0
     call    init_regs
     // test NOP
@@ -219,7 +223,8 @@ inst_test:
     bgeu    x10, x11, (__test_bgeu_not_taken + 24) //taken
     addi    x11, x11, 10
     call    check
-    // initiale memory test
+
+    // initialize memory test
     __test_mem:
     addi    sp, sp, -4
     // test SW & LW
@@ -271,11 +276,24 @@ inst_test:
     addi    sp, sp, 4
 
     // CSR Tests
+    // test csrrw
+    __test_csrrw:
+    li      x11, 0xFFAA5522
+    li      x12, 0x5FF00AA5
+    csrw    mscratch, x11
+    csrrw   x10, mscratch, x12
+    csrr    x13, mscratch
+    call    check
+    mv      x10, x13
+    mv      x11, x12
+    call    check
+    li      x12, 12
+    li      x13, 13
     // test misa
     __test_misa:
     li      x10, 0xFFFFFFFF
     csrrw   x10, misa, x10
-    li      x11, 0x80000000     // expected value
+    li      x11, 0x40000000     // expected value
     call    check
     csrr    x10, misa
     call    check
@@ -369,50 +387,394 @@ inst_test:
     bgt     x10, x11, +8
     mv      x11, x10
     call    check
+    csrr    x10, mcycleh
+    li      x11, 2
+    call    check
+    __test_cycle:
+    csrw    mcycle, 0
+    csrr    x10, cycle
+    li      x11, 0
+    call    check
+    csrw    mcycle, 0
+    nop
+    nop
+    csrr    x10, cycle
+    li      x11, 2
+    call    check
     __end_test_mcycle:
     lw      x10, 0(sp)
     csrw    mcountinhibit, x10  // restore value
     addi    sp, sp, 4
+    __test_mtvec_rw:
+    li      x11, 0xFFAA5501
+    csrrw   x12, mtvec, x11
+    csrr    x10, mtvec
+    call    check
+    csrw    mtvec, x12
+    li      x12, 12
+    __test_mip_rw:
+    li      x10, 0x0000FFFF
+    csrr    x12, mip            // save value
+    and     x10, x10, x12       // get bits 15:0
+    li      x11, 0xFFAA0000
+    or      x10, x10, x11       // build expected value
+    li      x11, 0xFFAA55FF
+    csrw    mip, x11
+    csrr    x11, mip
+    call    check
+    csrw    mip, x12            // restore value
+    li      x12, 12
+    __test_mie_rw:
+    li      x11, 0xFFAA55FF
+    csrrw   x12, mie, x11       // save value, write new value
+    csrr    x10, mie
+    call    check
+    mv      x11, x0
+    csrw    mie, 0
+    csrr    x10, mie
+    call    check
+    csrw    mie, x12            // restore value
+    li      x12, 12
+    __test_mepc_rw:
+    li      x11, 0xAAFF55FF
+    csrrw   x12, mepc, x11      // save value, write new value
+    csrr    x10, mepc
+    li      x11, 0xAAFF55FC     // lowest 2 bits are read-only zero
+    call    check
+    mv      x11, x0
+    csrw    mepc, 0
+    csrr    x10, mepc
+    call    check
+    csrw    mepc, x12           // restore value
+    li      x12, 12
+    __test_mcause_rw:
+    li      x11, 0x55AAFF55
+    csrrw   x12, mcause, x11    // save value, write new value
+    csrr    x10, mcause
+    call    check
+    mv      x11, x0
+    csrw    mcause, 0
+    csrr    x10, mcause
+    call    check
+    csrw    mcause, x12         // restore value
+    li      x12, 12
+    __test_mtval_rw:
+    li      x11, 0xFAA5500F
+    csrrw   x12, mtval, x11     // save value, write new value
+    csrr    x10, mtval
+    call    check
+    mv      x11, x0
+    csrw    mtval, 0
+    csrr    x10, mtval
+    call    check
+    csrw    mtval, x12          // restore value
+    li      x12, 12
 
-    // TRAP, FENCE, ECALL, EBREAK, MRET, and WFI are not explicitely tested
+    // Exception Tests
+    __test_ex:
+    addi    sp, sp, -4
+    la      x10, exception_isr
+    csrw    mtvec, x10          // set new interrupt handler
+    __test_ex_inst_misaligned_jalr:
+    // check mepc
+    auipc   x10, 0
+    addi    x10, x10, 10
+    jr      x10                 // inst misaligned exception
+    auipc   x11, 0
+    csrr    x10, mepc
+    call    check
+    // check mtval
+    addi    x11, x11, -2
+    csrr    x10, mtval
+    call    check
+    // check mcause
+    li      x11, 0
+    csrr    x10, mcause
+    call    check
+    __test_ex_inst_misaligned_beq:
+    beq     x0, x0, (__test_ex_inst_misaligned_beq + 2) // inst misaligned exception
+    auipc   x11, 0
+    csrr    x10, mepc
+    call    check
+    __test_ex_inst_misaligned_bne:
+    bne     x0, x0, (__test_ex_inst_misaligned_bne + 2) // no exception
+    nop
+    csrr    x10, mepc           // mepc should be unchanged
+    call    check
+    __test_ex_inst_access_fault_reserved:
+    // check mepc
+    li      x11, 0x80000000     // reserved address space
+    auipc   x10, 0
+    add     x10, x10, 12        // pass trap-return address
+    jr      x11                 // inst access fault exception
+    nop
+    li      x11, 0x80000000
+    call    check               // x10 is set to mepc when exception traps
+    // check mtval
+    csrr    x10, mtval
+    call    check
+    // check mcause
+    li      x11, 1
+    csrr    x10, mcause
+    call    check
+    __test_ex_inst_access_fault_ram:
+    mv      x11, sp             // RAM address
+    auipc   x10, 0
+    addi    x10, x10, 12        // pass trap-return address
+    jr      x11                 // inst access fault exception
+    nop
+    mv      x11, sp
+    call    check               // x10 is set to mepc when exception traps
+    __test_ex_illegal_inst:
+    // check mepc
+    .word   0x00000000          // illegal instruction (zeros)
+    auipc   x11, 0
+    csrr    x10, mepc
+    call    check
+    // check mepc
+    .word   0x3020007F          // illegal instruction (MRET, but incorrect opcode)
+    auipc   x11, 0
+    csrr    x10, mepc
+    call    check
+    // check mtval
+    lw      x11, -4(x11)
+    csrr    x10, mtval
+    call    check
+    // check mcause
+    li      x11, 2
+    csrr    x10, mcause
+    call    check
+    __test_ex_breakpoint:
+    // check mepc
+    ebreak                      // breakpoint exception
+    auipc   x11, 0
+    csrr    x10, mepc
+    call    check
+    // check mtval
+    addi    x11, x11, -4
+    csrr    x10, mtval
+    call    check
+    // check mcause
+    li      x11, 3
+    csrr    x10, mcause
+    call    check
+    __test_ex_load_misaligned:
+    // check mepc
+    li      x11, -1
+    sw      x11, 0(sp)
+    lw      x12, 2(sp)          // load address misaligned exception
+    auipc   x11, 0
+    csrr    x10, mepc
+    call    check
+    // check destination register
+    li      x11, 12
+    mv      x10, x12
+    call    check
+    // check mtval
+    addi    x11, sp, 2
+    csrr    x10, mtval
+    call    check
+    // check mcause
+    li      x11, 4
+    csrr    x10, mcause
+    call    check
+    __test_ex_load_access_fault:
+    // check mepc
+    li      x11, 0x80000000     // reserved address space
+    lw      x12, 0(x11)         // load access fault exception
+    auipc   x11, 0
+    csrr    x10, mepc
+    call    check
+    // check destination register
+    li      x11, 12
+    mv      x10, x12
+    call    check
+    // check mtval
+    li      x11, 0x80000000
+    csrr    x10, mtval
+    call    check
+    // check mcause
+    li      x11, 5
+    csrr    x10, mcause
+    call    check
+    __test_ex_store_misaligned:
+    // check mepc
+    sw      zero, 0(sp)
+    li      x11, -1
+    sw      x11, 2(sp)          // store address misaligned exception
+    auipc   x11, 0
+    csrr    x10, mepc
+    call    check
+    // check write address
+    li      x11, 0
+    lw      x10, 0(sp)
+    call    check
+    // check mtval
+    addi    x11, sp, 2
+    csrr    x10, mtval
+    // check mcause
+    li      x11, 6
+    csrr    x10, mcause
+    __test_ex_store_access_fault:
+    // check mepc
+    auipc   x11, 0              // read-only ROM address
+    sw      zero, 0(x11)        // store access fault exception
+    auipc   x11, 0
+    csrr    x10, mepc
+    call    check
+    // check mtval
+    la      x11, __test_ex_store_access_fault
+    csrr    x10, mtval
+    call    check
+    // check mcause
+    li      x11, 7
+    csrr    x10, mcause
+    call    check
+    __test_ex_ecall_mmode:
+    // check mepc
+    ecall                       // environment call from M-mode exception
+    auipc   x11, 0
+    csrr    x10, mepc
+    call    check
+    // check mtval
+    li      x11, 0
+    csrr    x10, mtval
+    call    check
+    // check mcause
+    li      x11, 11
+    csrr    x10, mcause
+    call    check
+    __end_test_ex:
+    addi    sp, sp, 4
+
+    // Simple interrupt test
+    __test_interrupt:
+    la      x10, trap_vector_table
+    csrw    mtvec, x10          // set trap vector table
+    csrs    mtvec, 1            // enable vectored mode
+    // check mepc
+    li      x11, 1
+    sll     x11, x11, 18        // tim0 interrupt bit
+    csrw    mie, x11
+    csrw    mip, x11            // trigger tim0 interrupt
+    nop
+    auipc   x11, 0
+    csrr    x10, mepc
+    call    check
+    // check mtval
+    li      x11, 0
+    csrr    x10, mtval
+    call    check
+    // check mcause
+    li      x11, 0x80000000     // mcause interrupt bit
+    or      x11, x11, 18        // tim0 interrupt
+    csrr    x10, mcause
+    call    check
+
+    // FENCE, MRET, and WFI are not explicitly tested
 
     __test_done:
     // finally test that all registers are correct (except x1, x2, x10, & x11)
     li      x10, 10
     li      x11, 11
     call    check_all
-    lw      ra, 0(sp)       // pop mscratch
+    lw      ra, 0(sp)       // pop mtvec
+    csrw    mtvec, ra
+    lw      ra, 4(sp)       // pop mscratch
     csrw    mscratch, ra
-    lw      ra, 4(sp)       // pop return address
-    addi    sp, sp, 8
+    lw      ra, 8(sp)       // pop return address
+    addi    sp, sp, 12
     ret
 
 
 
 
 // Check values function
-check: // check(int test_value, int correct_value)
-    csrw    mscratch, x0
-    ebreak
-    bne     x10, x11, error
+check: // void check(int test_value, int correct_value)
+    csrw    mscratch, 0
+    fence
     ret
 
 
-// Error trap
-error:
-    li      x10, 0xDEADBEEF
-    csrw    mscratch, x10
-    ebreak
-    ret
-
-
-// Success trap
-success:
+// Done trap
+done:
     li      x10, 0x0D15EA5E
     csrw    mscratch, x10
-    ebreak
+    fence
     __dead_loop:
     j       __dead_loop
+
+
+// Trap Vector Table
+.balign 128
+trap_vector_table:
+    j       exception_isr       // 0: non-maskable interrupt / exceptions
+    j       ssi_isr             // 1: supervisor-mode software interrupt
+    j       default_isr         // 2: reserved
+    j       msi_isr             // 3: machine-mode software interrupt
+    j       default_isr         // 4: reserved
+    j       sti_isr             // 5: supervisor-mode timer interrupt
+    j       default_isr         // 6: reserved
+    j       mti_isr             // 7: machine-mode timer interrupt
+    j       default_isr         // 8: reserved
+    j       sei_isr             // 9: supervisor-mode external interrupt
+    j       default_isr         // 10: reserved
+    j       mei_isr             // 11: machine-mode external interrupt
+    j       default_isr         // 12: reserved
+    j       default_isr         // 13: reserved
+    j       default_isr         // 14: reserved
+    j       default_isr         // 15: reserved
+    j       uart0rx_isr         // 16: UART0 RX interrupt
+    j       uart0tx_isr         // 17: UART0 TX interrupt
+    j       tim0_isr            // 18: general-purpose timer 0 interrupt
+    j       tim1_isr            // 19: general-purpose timer 1 interrupt
+    j       gpioa0_isr          // 20: GPIOA interrupt 0
+    j       gpioa1_isr          // 21: GPIOA interrupt 1
+    j       gpiob0_isr          // 22: GPIOB interrupt 0
+    j       gpiob1_isr          // 23: GPIOB interrupt 1
+    j       gpioc0_isr          // 24: GPIOC interrupt 0
+    j       gpioc1_isr          // 25: GPIOC interrupt 1
+    j       default_isr         // 26: reserved
+    j       default_isr         // 27: reserved
+    j       default_isr         // 28: reserved
+    j       default_isr         // 29: reserved
+    j       default_isr         // 30: reserved
+    j       default_isr         // 31: reserved
+
+
+ssi_isr:
+msi_isr:
+sti_isr:
+mti_isr:
+sei_isr:
+mei_isr:
+uart0rx_isr:
+uart0tx_isr:
+tim0_isr:
+tim1_isr:
+gpioa0_isr:
+gpioa1_isr:
+gpiob0_isr:
+gpiob1_isr:
+gpioc0_isr:
+gpioc1_isr:
+default_isr:
+    csrw    mip, 0              // clear all interrupts
+    mret
+
+
+// Exception handler for testing
+exception_isr: // sets x10 to mepc, trap-return to mepc+4
+    csrr    x11, mcause
+    addi    x11, x11, -1 // mcause = 1: inst access fault
+    beq     x11, x0, test_ex_isr_inst_access_fault
+    csrr    x10, mepc
+    addi    x10, x10, 4
+    csrrw   x10, mepc, x10
+    mret
+test_ex_isr_inst_access_fault: // sets x10 to mepc, trap-return to x10 argument
+    csrrw   x10, mepc, x10
+    mret
 
 
 // Initialize registers function
@@ -522,4 +884,9 @@ check_all:
     addi    sp, sp, 4
     ret
 __check_all_fail:
-    j       error
+    mv      x10, x1
+    lw      ra, 0(sp)   // pull return address from stack
+    addi    sp, sp, 4
+    csrw    mscratch, 1
+    fence
+    ret

@@ -48,7 +48,7 @@ module core #(
         output logic [RAM_ADDR_WIDTH-1:0] ram_addr,                 // DBus
         input  rv32::word ram_rd_data,                              // DBus
 
-        // AXI ports
+        // AXI port
         output logic axi_rd_en,                                     // DBus
         output logic axi_wr_en,                                     // DBus
         output logic [AXI_ADDR_WIDTH-1:0] axi_addr,                 // DBus
@@ -127,6 +127,7 @@ module core #(
     logic global_mie;
     logic endianness;
     logic mret;
+    logic exception;
     logic trap;
     // Machine Timer
     logic mtime_rd_en;
@@ -325,10 +326,10 @@ module core #(
 
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
-    // BEGIN: Optional CSR Instatiation
+    // BEGIN: Optional CSR Instantiation
     ////////////////////////////////////////////////////////////
     generate
-    if (USE_CSR) begin
+    if (USE_CSR) begin : gen_csr
         csr #(
                 .HART_ID(HART_ID)
             ) CSR_inst (
@@ -360,10 +361,10 @@ module core #(
         assign trap_wr_data = 0;
         assign endianness = 0; // little-endian
         assign illegal_csr = 0;
-    end // if/else (USE_CSR)
+    end // if (!USE_CSR)
     endgenerate
     ////////////////////////////////////////////////////////////
-    // END: Optional CSR Instatiation
+    // END: Optional CSR Instantiation
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
 
@@ -372,10 +373,10 @@ module core #(
 
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
-    // BEGIN: Optional Trap Unit Instatiation
+    // BEGIN: Optional Trap Unit Instantiation
     ////////////////////////////////////////////////////////////
     generate
-    if (USE_TRAP) begin
+    if (USE_TRAP) begin : gen_trap
         trap #(
                 .RESET_ADDR(RESET_ADDR)
             ) TRAP_inst (
@@ -413,6 +414,7 @@ module core #(
                 .timer1_int,
                 .next_pc,
                 .csr_rd_data(trap_rd_data),
+                .exception,
                 .trap
             );
     end // if (USE_TRAP)
@@ -423,7 +425,7 @@ module core #(
     end // if/else (USE_TRAP)
     endgenerate
     ////////////////////////////////////////////////////////////
-    // END: Optional Trap Unit Instatiation
+    // END: Optional Trap Unit Instantiation
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
 
@@ -435,7 +437,7 @@ module core #(
     // BEGIN: Optional Machine Timer Instantiation
     ////////////////////////////////////////////////////////////
     generate
-    if (USE_MTIME) begin
+    if (USE_MTIME) begin : gen_mtime
         mtime MTIME_inst (
                 .clk,
                 .rst_n,

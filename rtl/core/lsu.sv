@@ -39,7 +39,7 @@ module lsu #(
 
     assign dbus_addr    = alu_result;
     assign dbus_wr_data = (endianness) ? convert_endian(alt_data) : alt_data;
-    assign csr_wr_data  = alt_data;
+    assign csr_wr_data  = alu_result;
 
     rv32::word dbus_rd_data_endian;
     logic [15:0] dbus_rd_data_endian16;

@@ -153,7 +153,7 @@ This allows the targeting of addresses $\plusmn$1 MiB.
 ![](./figures/instructions/jal_encoding.png) \
 **Figure 6.** JAL instruction encoding
 
-The jump and link register (`JALR`) instruction uses indirect jumps, meaning it does not depend on the current PC.
+The jump and link register (`JALR`) instruction uses direct jumps, meaning it does not depend on the current PC.
 The PC is set to the address obtained by adding the sign-extended immediate offset `imm[11:0]` with the base register `rs1`.
 The least-significant bit of the result is always set to zero, forcing two-byte alignment.
 

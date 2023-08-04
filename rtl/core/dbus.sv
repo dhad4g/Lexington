@@ -81,7 +81,7 @@ module dbus #(
 
 
     // Set data_misaligned, load_store_n, and dbus_wait
-    assign data_misaligned  = (rd_en | wr_en) & (&(addr[rv32::ADDR_BITS_IN_WORD-1:0]));
+    assign data_misaligned  = (rd_en | wr_en) & (|(addr[rv32::ADDR_BITS_IN_WORD-1:0]));
     assign load_store_n     = rd_en;
     assign dbus_wait        = ((rd_en | wr_en) && USE_AXI && is_axi_addr) ? axi_busy : 0;
     assign dbus_err         = data_misaligned | data_access_fault;

@@ -57,11 +57,11 @@ The microarchitecture design is documented in [docs/Lexington.md](./docs/Lexingt
   - [x] Instruction Bus (IBus)
   - [x] Data Bus (DBus)
   - [x] CSR
-  - [ ] Trap Unit
+  - [x] Trap Unit
   - [ ] Machine Timer
 - [ ] Peripherals
   - [x] AXI Manager
-  - [ ] AXI Interconnect
+  - [x] AXI Interconnect
   - [ ] GP Timer
   - [x] GPIO
   - [ ] UART

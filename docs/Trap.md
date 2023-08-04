@@ -59,6 +59,7 @@ This document uses the RISC-V Specification definitions of *trap*, *exception*, 
 
 - **`next_pc[WIDTH-1:0]`** next PC
 - **`csr_rd_data[WIDTH-1:0]`** CSR read data
+- **`exception`** exception flag
 - **`trap`** trap taken flag
 
 ## Behavior

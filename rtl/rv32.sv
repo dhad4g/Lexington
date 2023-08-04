@@ -17,6 +17,7 @@ package rv32;
     typedef logic [REG_ADDR_WIDTH-1:0] reg_addr_t;
     typedef logic [CSR_ADDR_WIDTH-1:0] csr_addr_t;
 
+
     typedef enum csr_addr_t {
         csr_addr_misa           = 12'h301,
         csr_addr_mvendorid      = 12'hF11,
@@ -46,6 +47,7 @@ package rv32;
         csr_addr_timeh          = 12'hC81
     } CSR_ADDR;
 
+
     // RISC-V privilege is encoded as a 2-bit value
     // This implemetation uses a third bit to encode debug-mode
     typedef enum logic [2:0] {
@@ -54,6 +56,30 @@ package rv32;
         mmode   = 3'b011,    // machine-mode
         dmode   = 3'b111     // debug-mode
     } priv_mode_t;
+
+
+    // Interrupts and Exceptions
+    localparam TRAP_CODE_NMI                    = 0;        // non-maskable interrupt
+    localparam TRAP_CODE_SSI                    = 1;        // supervisor software interrupt
+    localparam TRAP_CODE_MSI                    = 3;        // machine software interrupt
+    localparam TRAP_CODE_STI                    = 5;        // supervisor timer interrupt
+    localparam TRAP_CODE_MTI                    = 7;        // machine timer interrupt
+    localparam TRAP_CODE_SEI                    = 9;        // supervisor external interrupt
+    localparam TRAP_CODE_MEI                    = 11;       // machine external interrupt
+    localparam TRAP_CODE_INST_MISALIGNED        = 0;        // instruction address misaligned exception
+    localparam TRAP_CODE_INST_ACCESS_FAULT      = 1;        // instruction access fault exception
+    localparam TRAP_CODE_ILLEGAL_INST           = 2;        // illegal instruction exception
+    localparam TRAP_CODE_BREAKPOINT             = 3;        // breakpoing exception
+    localparam TRAP_CODE_LOAD_MISALIGNED        = 4;        // load address misaligned exception
+    localparam TRAP_CODE_LOAD_ACCESS_FAULT      = 5;        // load access fault exception
+    localparam TRAP_CODE_STORE_MISALIGNED       = 6;        // store address misaligned exception
+    localparam TRAP_CODE_STORE_ACCESS_FAULT     = 7;        // store access fault exception
+    localparam TRAP_CODE_ENV_CALL_UMODE         = 8;        // environment call from u-mode exception
+    localparam TRAP_CODE_ENV_CALL_SMODE         = 9;        // environment call from s-mode exception
+    localparam TRAP_CODE_ENV_CALL_MMODE         = 11;       // environment call form m-mode exception
+    localparam TRAP_CODE_INST_PAGE_FAULT        = 12;       // instruction page fault exception
+    localparam TRAP_CODE_LOAD_PAGE_FAULT        = 13;       // load page fault exception
+    localparam TRAP_CODE_STORE_PAGE_FAULT       = 15;       // store page fault exception
 
 endpackage
 

@@ -23,7 +23,7 @@ module axi4_lite_manager #(
         output logic access_fault,
         output logic busy,
 
-        axi4_lite.manager axi
+        axi4_lite.manager axi_m
     );
 
     logic rd_busy, wr_busy;
@@ -32,8 +32,8 @@ module axi4_lite_manager #(
     logic rd_fault, wr_fault;
     assign access_fault = rd_fault | wr_fault;
 
-    assign axi.aclk = clk;
-    assign axi.areset_n = rst_n;
+    assign axi_m.aclk = clk;
+    assign axi_m.areset_n = rst_n;
 
 
     ////////////////////////////////////////////////////////////
@@ -42,10 +42,10 @@ module axi4_lite_manager #(
     ////////////////////////////////////////////////////////////
     integer rd_timer;
     enum {R_IDLE, AR_VALID, R_READY} rd_state;
-    assign axi.arprot.privileged = 1;
-    assign axi.arprot.non_secure = 0;
-    assign axi.arprot.inst_data_n = 0;
-    assign axi.araddr = addr;
+    assign axi_m.arprot.privileged = 1;
+    assign axi_m.arprot.non_secure = 0;
+    assign axi_m.arprot.inst_data_n = 0;
+    assign axi_m.araddr = addr;
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             rd_state <= R_IDLE;
@@ -55,7 +55,7 @@ module axi4_lite_manager #(
             case (rd_state)
                 R_IDLE: begin // first clock cycle of instruction
                     if (rd_en) begin
-                        rd_state <= (axi.arready) ? R_READY : AR_VALID;
+                        rd_state <= (axi_m.arready) ? R_READY : AR_VALID;
                         rd_timer <= 0;
                     end
                 end
@@ -64,7 +64,7 @@ module axi4_lite_manager #(
                     if (rd_timer >= TIMEOUT) begin
                         rd_state <= R_IDLE;
                     end
-                    else if (axi.arready) begin
+                    else if (axi_m.arready) begin
                         rd_state <= R_READY;
                     end
                 end
@@ -73,7 +73,7 @@ module axi4_lite_manager #(
                     if (rd_timer >= TIMEOUT) begin
                         rd_state <= R_IDLE;
                     end
-                    else if (axi.rvalid) begin
+                    else if (axi_m.rvalid) begin
                         rd_state <= R_IDLE;
                     end
                 end
@@ -86,34 +86,34 @@ module axi4_lite_manager #(
     always_comb begin
         if (!rst_n) begin
             rd_busy     = 0;
-            axi.arvalid = 0;
-            axi.rready  = 0;
+            axi_m.arvalid = 0;
+            axi_m.rready  = 0;
             rd_fault    = 0;
         end
         else begin
             case (rd_state)
                 R_IDLE: begin // first clock cycle of instruction
                     rd_busy     = rd_en;
-                    axi.arvalid = rd_en;
-                    axi.rready  = 0;
+                    axi_m.arvalid = rd_en;
+                    axi_m.rready  = 0;
                     rd_fault    = 0;
                 end
                 AR_VALID: begin // ar_valid asserted, waiting for ar_ready
                     rd_busy     = 1;
-                    axi.arvalid = 1;
-                    axi.rready  = 0;
+                    axi_m.arvalid = 1;
+                    axi_m.rready  = 0;
                     rd_fault    = (rd_timer >= TIMEOUT);
                 end
                 R_READY: begin // r_ready asserted, waiting for r_valid
-                    rd_busy     = ~axi.rvalid;
-                    axi.arvalid = 0;
-                    axi.rready  = 1;
-                    rd_fault    = (rd_timer >= TIMEOUT) | (axi.rresp != axi.rresp.OKAY);
+                    rd_busy     = ~axi_m.rvalid;
+                    axi_m.arvalid = 0;
+                    axi_m.rready  = 1;
+                    rd_fault    = (rd_timer >= TIMEOUT) | (axi_m.rresp != axi_m.rresp.OKAY);
                 end
                 default: begin // error
                     rd_busy     = 0;
-                    axi.arvalid = 0;
-                    axi.rready  = 0;
+                    axi_m.arvalid = 0;
+                    axi_m.rready  = 0;
                     rd_fault    = 1;
                 end
             endcase
@@ -131,11 +131,11 @@ module axi4_lite_manager #(
     ////////////////////////////////////////////////////////////
     integer wr_timer;
     enum {W_IDLE, AWW_VALID, AW_VALID, W_VALID, B_READY} wr_state;
-    assign axi.awprot.privileged = 1;
-    assign axi.awprot.non_secure = 0;
-    assign axi.awprot.inst_data_n = 0;
-    assign axi.awaddr = addr;
-    assign axi.wstrb = wr_strobe;
+    assign axi_m.awprot.privileged = 1;
+    assign axi_m.awprot.non_secure = 0;
+    assign axi_m.awprot.inst_data_n = 0;
+    assign axi_m.awaddr = addr;
+    assign axi_m.wstrb = wr_strobe;
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             wr_state <= W_IDLE;
@@ -145,7 +145,7 @@ module axi4_lite_manager #(
             case (wr_state)
                 W_IDLE: begin // first cycle of instruction
                     if (wr_en) begin
-                        case ({axi.awready, axi.wready})
+                        case ({axi_m.awready, axi_m.wready})
                             'b00: wr_state <= AWW_VALID;
                             'b01: wr_state <= AW_VALID;
                             'b10: wr_state <= W_VALID;
@@ -155,7 +155,7 @@ module axi4_lite_manager #(
                     end
                 end
                 AWW_VALID: begin // awvalid and wvalid asserted, waiting for awready and wready
-                    case ({axi.awready, axi.wready})
+                    case ({axi_m.awready, axi_m.wready})
                         'b00: wr_state <= AWW_VALID;
                         'b01: wr_state <= AW_VALID;
                         'b10: wr_state <= W_VALID;
@@ -163,17 +163,17 @@ module axi4_lite_manager #(
                     endcase
                 end
                 AW_VALID: begin // awvalid asserted, waiting for awready, write channel already complete
-                    if (axi.awready) begin
+                    if (axi_m.awready) begin
                         wr_state <= B_READY;
                     end
                 end
                 W_VALID: begin // wvalid asserted, waiting for wready, write address channel already complete
-                    if (axi.wready) begin
+                    if (axi_m.wready) begin
                         wr_state <= B_READY;
                     end
                 end
                 B_READY: begin // b_ready asserted, waiting for bvalid
-                    if (axi.bvalid) begin
+                    if (axi_m.bvalid) begin
                         wr_state <= W_IDLE;
                     end
                 end
@@ -197,44 +197,44 @@ module axi4_lite_manager #(
             case (wr_state)
                 W_IDLE: begin // first cycle of instruction
                     wr_busy     = wr_en;
-                    axi.awvalid = wr_en;
-                    axi.wvalid  = wr_en;
-                    axi.bready  = 0;
+                    axi_m.awvalid = wr_en;
+                    axi_m.wvalid  = wr_en;
+                    axi_m.bready  = 0;
                     wr_fault    = 0;
                 end
                 AWW_VALID: begin // awvalid and wvalid asserted, waiting for awready and wready
                     wr_busy     = 1;
-                    axi.awvalid = 1;
-                    axi.wvalid  = 1;
-                    axi.bready  = 0;
+                    axi_m.awvalid = 1;
+                    axi_m.wvalid  = 1;
+                    axi_m.bready  = 0;
                     wr_fault    = 0;
                 end
                 AW_VALID: begin // awvalid asserted, waiting for awready, write channel already complete
                     wr_busy     = 1;
-                    axi.awvalid = 1;
-                    axi.wvalid  = 0;
-                    axi.bready  = 0;
+                    axi_m.awvalid = 1;
+                    axi_m.wvalid  = 0;
+                    axi_m.bready  = 0;
                     wr_fault    = 0;
                 end
                 W_VALID: begin // wvalid asserted, waiting for wready, write address channel already complete
                     wr_busy     = 1;
-                    axi.awvalid = 0;
-                    axi.wvalid  = 1;
-                    axi.bready  = 0;
+                    axi_m.awvalid = 0;
+                    axi_m.wvalid  = 1;
+                    axi_m.bready  = 0;
                     wr_fault    = 0;
                 end
                 B_READY: begin // b_ready asserted, waiting for bvalid
-                    wr_busy     = ~axi.bvalid;
-                    axi.awvalid = 0;
-                    axi.wvalid  = 0;
-                    axi.bready  = 1;
-                    wr_fault    = (axi.bresp != axi.bresp.OKAY);
+                    wr_busy     = ~axi_m.bvalid;
+                    axi_m.awvalid = 0;
+                    axi_m.wvalid  = 0;
+                    axi_m.bready  = 1;
+                    wr_fault    = (axi_m.bresp != axi_m.bresp.OKAY);
                 end
                 default: begin // error
                     wr_busy     = 0;
-                    axi.awvalid = 0;
-                    axi.wvalid  = 0;
-                    axi.bready  = 0; 
+                    axi_m.awvalid = 0;
+                    axi_m.wvalid  = 0;
+                    axi_m.bready  = 0; 
                     wr_fault    = 1;
                 end
             endcase

@@ -15,8 +15,7 @@ __Lexington_heap_size = DEFINED(__Lexington_heap_size) ? __Lexington_heap_size :
 
 MEMORY
 {
-    /*rom (rx) : ORIGIN = __Lexington_rom_base, LENGTH = __Lexington_rom_size*/
-    rom (x)  : ORIGIN = __Lexington_rom_base, LENGTH = __Lexington_rom_size
+    rom (rx) : ORIGIN = __Lexington_rom_base, LENGTH = __Lexington_rom_size
     ram (rw) : ORIGIN = __Lexington_ram_base, LENGTH = __Lexington_ram_size
 }
 

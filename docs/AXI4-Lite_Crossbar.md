@@ -37,4 +37,4 @@ The AXI4-Lite crossbar decodes address from the upstream manager an routes trans
 | 0xFFFF_FF70 - 0xFFFF_FF7F | `uart0` |
 | 0xFFFF_FFA0 - 0xFFFF_FFAF | `GPIOA` |
 | 0xFFFF_FFB0 - 0xFFFF_FFBF | `GPIOB` |
-| 0xFFFF_FFB0 - 0xFFFF_FFCF | `GPIOC` |
+| 0xFFFF_FFC0 - 0xFFFF_FFCF | `GPIOC` |

@@ -40,19 +40,19 @@ module csr #(
     // Current privilege level (not visible)
     rv32::priv_mode_t priv;
 
-    // CSR definitions
+    // CSRs
     rv32::word misa;
     rv32::word mvendorid;
     rv32::word marchid;
     rv32::word mimpid;
     rv32::word mhartid;
     struct packed {
-        logic [25:0] reserved6;
+        logic [25:0] reserved63_38;
         logic MBE;
         logic SBE;
-        logic [3:0] reserved5;
+        logic [3:0] reserved45_32;
         logic SD;
-        logic [7:0] reserved4;
+        logic [7:0] reserved40_23;
         logic TSR;
         logic TW;
         logic TVM;
@@ -67,11 +67,11 @@ module csr #(
         logic MPIE;
         logic UBE;
         logic SPIE;
-        logic reserved3;
+        logic reserved4;
         logic MIE;
         logic reserved2;
         logic SIE;
-        logic reserved1;
+        logic reserved0;
     } mstatus;
     logic [63:0] mcycle;
     logic [64:0] minstret;
@@ -89,6 +89,7 @@ module csr #(
     assign endianness = mstatus.MBE;
 
     // Read-Only CSR assignments
+                // MXL    0     z    y    x    w    v    u    t    s    r
     assign misa = {2'b1, 4'b0, 1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,
                 // extensions:   q    p    o    n    m    l    k    j    i
                                1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,
@@ -98,11 +99,11 @@ module csr #(
     assign marchid = 32'h0;
     assign mimpid = 32'h1;
     assign mhartid = HART_ID;
-    assign mstatus.reserved6 = 0;
+    assign mstatus.reserved63_38 = 0;
     assign mstatus.SBE = 0;
-    assign mstatus.reserved5 = 0;
+    assign mstatus.reserved45_32 = 0;
     assign mstatus.SD = 0;
-    assign mstatus.reserved4 = 0;
+    assign mstatus.reserved40_23 = 0;
     assign mstatus.TSR = 0;
     assign mstatus.TW = 0;
     assign mstatus.TVM = 0;
@@ -116,7 +117,10 @@ module csr #(
     assign mstatus.SPP = 0;
     assign mstatus.UBE = 0;
     assign mstatus.SPIE = 1;
+    assign mstatus.reserved4 = 0;
+    assign mstatus.reserved2 = 0;
     assign mstatus.SIE = 1;
+    assign mstatus.reserved0 = 0;
     assign mconfigptr = 0;
 
 
@@ -132,10 +136,13 @@ module csr #(
             trap_wr_en  = 0;
         end
         else begin
+            logic _illegal; // track csr address search accros privilege levels
+            _illegal = 0;
             // default illegal_csr, trap_rd_en, & trap_wr_en to 0
             illegal_csr = 0;
             trap_rd_en  = 0;
             trap_wr_en  = 0;
+            // User-Mode CSRs
             case (addr)
                 rv32::csr_addr_cycle: begin
                     rd_data = mcycle[31:0];
@@ -155,9 +162,23 @@ module csr #(
                 rv32::csr_addr_timeh: begin
                     rd_data = time_rd_data[63:32];
                 end
+                default: begin
+                    rd_data = 0;
+                    _illegal = 1;
+                end
             endcase
+            // Supervisor-Mode CSRs
+            if (_illegal && priv >= rv32::smode) begin
+                _illegal = 0;
+                case (addr)
+                    default: begin
+                        _illegal = 1;
+                    end
+                endcase
+            end // if (priv >= smode)
             // Machine-Mode CSRs
-            if (priv >= rv32::mmode) begin
+            if (_illegal && priv >= rv32::mmode) begin
+                _illegal = 0;
                 case (addr)
                     rv32::csr_addr_misa: begin
                         rd_data = misa;
@@ -232,19 +253,25 @@ module csr #(
                         rd_data = mconfigptr;
                     end
                     default: begin
-                        rd_data = 0;
-                        illegal_csr = rd_en | wr_en;
+                        _illegal = 1;
                     end
                 endcase
             end // if(priv >= mmode)
-            else begin
-                rd_data = 0;
-                illegal_csr = rd_en | wr_en;
-            end
+            // Debug-Mode CSRs
+            if (_illegal && priv >= rv32::dmode) begin
+                _illegal = 0;
+                case (addr)
+                    default: begin
+                        _illegal = 1;
+                    end
+                endcase
+            end // if (priv >= dmode)
+            // else omitted because it's covered by User-Mode default case
+            illegal_csr = (_illegal & (rd_en | wr_en));
         end
     end
     ////////////////////////////////////////////////////////////
-    // END: Read Logic
+    // END: Combinatorial Logic
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
 
@@ -266,6 +293,19 @@ module csr #(
             mscratch <= 0;
         end
         else begin
+
+            // mcycle behavior, overwritten by CSR write instructions
+            if (!mcountinhibit.CY) begin
+                mcycle <= mcycle + 1;
+            end
+
+            // minstret behavior, overwritten by CSR write instructions
+            if (!mcountinhibit.IR) begin
+                if (!dbus_wait) begin
+                    minstret <= minstret + 1;
+                end
+            end
+
             if (wr_en) begin
                 // User-Mode CSRs
                 case (addr)
@@ -323,22 +363,22 @@ module csr #(
                             // delegated to trap
                         end
                         rv32::csr_addr_mcycle: begin
-                            mcycle[31:0] <= rd_data;
+                            mcycle[31:0] <= wr_data;
                         end
                         rv32::csr_addr_mcycleh: begin
-                            mcycle[63:32] <= rd_data;
+                            mcycle[63:32] <= wr_data;
                         end
                         rv32::csr_addr_minstret: begin
-                            minstret[31:0] <= rd_data;
+                            minstret[31:0] <= wr_data;
                         end
                         rv32::csr_addr_minstreth: begin
-                            minstret[63:32] <= rd_data;
+                            minstret[63:32] <= wr_data;
                         end
                         rv32::csr_addr_mcountinhibit: begin
-                            mcountinhibit <= rd_data;
+                            mcountinhibit <= wr_data;
                         end
                         rv32::csr_addr_mscratch: begin
-                            mscratch <= rd_data;
+                            mscratch <= wr_data;
                         end
                         rv32::csr_addr_mepc: begin
                             // delegated to trap
@@ -352,13 +392,11 @@ module csr #(
                         rv32::csr_addr_mconfigptr: begin
                             // read-only
                         end
-                        default: begin
-                        end
                     endcase
                 end // if(priv >= mmode)
             end // if(wr_en)
 
-            // mstatus behavior
+            // trap behavior, overwrites CSR write instructions
             if (trap) begin
                 mstatus.MPIE <= mstatus.MIE;
                 mstatus.MIE  <= 0;
@@ -367,18 +405,6 @@ module csr #(
             else if (mret) begin
                 mstatus.MIE  <= mstatus.MPIE;
                 mstatus.MPIE <= 1;
-            end
-
-            // mcycle behavior
-            if (!mcountinhibit.CY) begin
-                mcycle <= mcycle + 1;
-            end
-
-            // minstret behavior
-            if (!mcountinhibit.IR) begin
-                if (!dbus_wait) begin
-                    minstret <= minstret + 1;
-                end
             end
 
         end

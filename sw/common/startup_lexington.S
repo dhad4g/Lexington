@@ -16,9 +16,9 @@ __startup_entry:
 
 // Setup CPU CSRs
 __startup_csr_init:
-    //csrw    mie, zero                       // disable all interrupt sources
-    //la      x1, __startup_trap_handler      // configure early-boot trap handler
-    //csrw    mtvec, x1
+    csrw    mie, zero                       // disable all interrupt sources
+    la      x1, __startup_trap_handler      // configure early-boot trap handler
+    csrw    mtvec, x1
 
 
 // Initialize stack pointer
@@ -77,8 +77,8 @@ __startup_main_entry:
     jal     x1, main        // call application main
 __startup_main_exit:
     // return or exit from main goes here
-    //csrw    mie, zero       // disable all interrupts
-    //csrw    mscratch, a0    // backup main's return code for debugger
+    csrw    mie, zero       // disable all interrupts
+    csrw    mscratch, a0    // backup main's return code for debugger
 
 
 // Call destructors
@@ -106,12 +106,12 @@ __startup_trap_handler:
     addi    sp, sp, -8
     sw      x8, 0(sp)
     sw      x9, 4(sp)
-    //csrr    x8, mcause
+    csrr    x8, mcause
     blt     x8, zero, __startup_trap_handler_end  // skip mepc modification if interrupt
     // increment mepc
-    //csrr    x8, mepc
+    csrr    x8, mepc
     addi    x8, x8, +4
-    //csrw    mepc, x8
+    csrw    mepc, x8
 __startup_trap_handler_end:
     lw      x8, 0(sp)
     lw      x9, 4(sp)

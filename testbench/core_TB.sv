@@ -1,6 +1,6 @@
 //depend rom.sv
 //depend ram.sv
-//cmd cd ${PROJ_DIR}/sw/examples/core_test && make
+//cmd cd ${PROJ_DIR}/sw/examples/core_test && make build dump
 //cmd cp ${PROJ_DIR}/sw/examples/core_test/rom.hex .
 `timescale 1ns/1ps
 
@@ -11,12 +11,12 @@ import lexington::*;
 
 module core_TB;
 
-    localparam MAX_CYCLES = 1024;
+    localparam MAX_CYCLES = 2048;
     integer clk_count = 0;
     integer fail = 0;
     integer fid;
 
-    localparam SUCCESS_CODE     = 'h0D15EA5E; // zero disease
+    localparam DONE_CODE     = 'h0D15EA5E; // zero disease
     localparam FAIL_CODE        = 'hDEADBEEF;
 
     // DUT Parameters
@@ -30,7 +30,7 @@ module core_TB;
     parameter HART_ID           = 0;                            // hardware thread id (see mhartid CSR)
     parameter RESET_ADDR        = DEFAULT_RESET_ADDR;           // program counter reset/boot address
     parameter USE_CSR           = 1;                            // enable generation of the CSR module
-    parameter USE_TRAP          = 0;                            // enable generation of the Trap Unit (requires CSR)
+    parameter USE_TRAP          = 1;                            // enable generation of the Trap Unit (requires CSR)
     parameter USE_MTIME         = 0;                            // enable generation of machine timer address space
     parameter USE_AXI           = 0;                            // enable generation of AXI address space
 
@@ -192,35 +192,51 @@ module core_TB;
 
         end
         else begin
-            if (DUT.ebreak) begin
-                // Environment Break
-                case (DUT.RegFile_inst.data[10])
-                    SUCCESS_CODE: begin
-                        $write("Reached success state");
-                        $write("\n\nPASSED all tests\n");
-                        $fwrite(fid,"Reached success state");
-                        $fwrite(fid,"\n\nPASSED all tests\n");
-                        $finish();
-                    end
-                    FAIL_CODE: begin
-                        $write("\n\nReached FAILED state\n");
-                        $fwrite(fid,"\n\nReached FAILED state\n");
-                        $fclose(fid);
-                        $finish();
-                    end
-                    default: begin // confirm x10 == x11
+            if (DUT.Decoder_inst.opcode == DUT.Decoder_inst.MISC_MEM
+            && DUT.Decoder_inst.funct3 == DUT.Decoder_inst.FUNCT3_FENCE) begin
+                // FENCE instruction triggers simulation check function
+                case (DUT.gen_csr.CSR_inst.mscratch)
+                    0: begin // confirm x10 == x11
+                        $write("clk_count=%5d    ", clk_count);
+                        $fwrite(fid,"clk_count=%5d    ", clk_count);
                         if (DUT.RegFile_inst.data[10] == DUT.RegFile_inst.data[11]) begin
                             $write("check passed, called from 0x%h\n", DUT.RegFile_inst.data[1]-4);
                             $fwrite(fid,"check passed, called from 0x%h\n", DUT.RegFile_inst.data[1]-4);
                         end
                         else begin
                             fail <= fail + 1;
-                            $write("\n\nCheck FAILED, called from 0x%h\n", DUT.RegFile_inst.data[1]-4);
-                            $fwrite(fid,"\n\nCheck FAILED, called from 0x%h\n", DUT.RegFile_inst.data[1]-4);
-                            // continue running other tests
-                            //$fclose(fid);
-                            //$finish();
+                            $write("check FAILED, called from 0x%h", DUT.RegFile_inst.data[1]-4);
+                            $write("    0x%h != 0x%h\n", DUT.RegFile_inst.data[10], DUT.RegFile_inst.data[11]);
+                            $fwrite(fid,"check FAILED, called from 0x%h", DUT.RegFile_inst.data[1]-4);
+                            $fwrite(fid,"    0x%h != 0x%h\n", DUT.RegFile_inst.data[10], DUT.RegFile_inst.data[11]);
                         end
+                    end
+                    1: begin // check all failed
+                        fail <= fail + 1;
+                        $write("clk_count=%5d    ", clk_count);
+                        $write("check_all FAILED, called from 0x%h", DUT.RegFile_inst.data[1]-4);
+                        $write("    register 0x%2d incorrect\n", DUT.RegFile_inst.data[10]);
+                        $fwrite(fid,"clk_count=%5d    ", clk_count);
+                        $fwrite(fid,"check_all FAILED, called from 0x%h", DUT.RegFile_inst.data[1]-4);
+                        $fwrite(fid,"    register 0x%2d incorrect\n", DUT.RegFile_inst.data[10]);
+                    end
+                    DONE_CODE: begin
+                        $write("Reached done state");
+                        $fwrite(fid,"Reached done state");
+                        clk_count <= MAX_CYCLES + 1;
+                    end
+                    FAIL_CODE: begin
+                        fail <= fail + 1;
+                        $write("\n\nReached FAILED state\n");
+                        $fwrite(fid,"\n\nReached FAILED state\n");
+                        $fclose(fid);
+                        $finish();
+                    end
+                    default: begin
+                        $write("clk_count=%5d    ", clk_count);
+                        $write("error, unknown ebreak call, mscratch = 0x%h\n", DUT.gen_csr.CSR_inst.mscratch);
+                        $fwrite(fid,"clk_count=%5d    ", clk_count);
+                        $fwrite(fid,"error, unknown ebreak call, mscratch = 0x%h\n", DUT.gen_csr.CSR_inst.mscratch);
                     end
                 endcase
             end
@@ -233,14 +249,16 @@ module core_TB;
         clk_count <= clk_count + 1;
         if (clk_count >= MAX_CYCLES) begin
             if (fail) begin
-                $write("\n\nFAILED %d tests\n", fail);
-                $fwrite(fid,"\n\nFailed %d tests\n", fail);
+                $write("\n\nFAILED %3d tests\n", fail);
+                $fwrite(fid,"\n\nFailed %3d tests\n", fail);
+            end
+            else if (DUT.gen_csr.CSR_inst.mscratch != DONE_CODE) begin
+                $write("\n\nFAILED, never reached done state\n");
+                $fwrite(fid,"\n\nFAILED, never reached done state\n");
             end
             else begin
-                //$write("\n\nPASSED all tests\n");
-                //$fwrite(fid,"\n\nPASSED all tests\n");
-                $write("\n\nFAILED, never reached success state\n");
-                $fwrite(fid,"\n\nFAILED, never reached success state\n");
+                $write("\n\nPASSED all tests\n");
+                $fwrite(fid,"\n\nPASSED all tests\n");
             end
             $fclose(fid);
             $finish();

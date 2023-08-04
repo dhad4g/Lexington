@@ -197,12 +197,14 @@ The default value on reset is 0x0.
 | --- | --- | --- |
 | 0 | Direct | All traps set PC to BASE |
 | 1 | Vectored | Asynchronous interrupts set PC to BASE+(4*cause) |
-| >=2 | - | *Reserved* |
+| $\ge$ 2 | - | *Reserved* |
+
+If using direct mode, all exceptions and interrupts trap to PC = BASE.
 
 If using vectored mode, the 5 LSBs of BASE are zeroed, thus forcing 128-byte alignment of the trap-vector table.
 This allows interrupt causes 0-31 to use the vectored addressing mode.
-Interrupts causes $
-ge$32 always use direct addressing.
+Interrupts causes $\ge$ 32 always use direct addressing.
+Exceptions always trap to PC = BASE.
 See the [`mcause` CSR](#machine-cause-register-mcause) for interrupt cause IDs
 
 Reset and NMIs always trap to address 0x0000_0000.
