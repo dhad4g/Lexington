@@ -46,6 +46,7 @@ module axi4_lite_manager #(
     assign axi_m.arprot.non_secure = 0;
     assign axi_m.arprot.inst_data_n = 0;
     assign axi_m.araddr = addr;
+    assign rd_data = axi_m.rdata;
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             rd_state <= R_IDLE;
@@ -99,16 +100,16 @@ module axi4_lite_manager #(
                     rd_fault    = 0;
                 end
                 AR_VALID: begin // ar_valid asserted, waiting for ar_ready
-                    rd_busy     = 1;
                     axi_m.arvalid = 1;
                     axi_m.rready  = 0;
-                    rd_fault    = (rd_timer >= TIMEOUT);
+                    rd_fault      = (rd_timer >= TIMEOUT);
+                    rd_busy       = ~rd_fault;
                 end
                 R_READY: begin // r_ready asserted, waiting for r_valid
-                    rd_busy     = ~axi_m.rvalid;
                     axi_m.arvalid = 0;
                     axi_m.rready  = 1;
-                    rd_fault    = (rd_timer >= TIMEOUT) | (axi_m.rresp != axi_m.rresp.OKAY);
+                    rd_fault    = (rd_timer >= TIMEOUT) | (axi_m.rresp != axi_m.OKAY);
+                    rd_busy     = ~rd_fault & ~axi_m.rvalid;
                 end
                 default: begin // error
                     rd_busy     = 0;
@@ -135,6 +136,7 @@ module axi4_lite_manager #(
     assign axi_m.awprot.non_secure = 0;
     assign axi_m.awprot.inst_data_n = 0;
     assign axi_m.awaddr = addr;
+    assign axi_m.wdata = wr_data;
     assign axi_m.wstrb = wr_strobe;
     always_ff @(posedge clk) begin
         if (!rst_n) begin
@@ -192,6 +194,11 @@ module axi4_lite_manager #(
     end
     always_comb begin
         if (!rst_n) begin
+            wr_busy       = 0;
+            axi_m.awvalid = 0;
+            axi_m.wvalid  = 0;
+            axi_m.bready  = 0;
+            wr_fault      = 0;
         end
         else begin
             case (wr_state)
@@ -228,7 +235,7 @@ module axi4_lite_manager #(
                     axi_m.awvalid = 0;
                     axi_m.wvalid  = 0;
                     axi_m.bready  = 1;
-                    wr_fault    = (axi_m.bresp != axi_m.bresp.OKAY);
+                    wr_fault    = (axi_m.bresp != axi_m.OKAY);
                 end
                 default: begin // error
                     wr_busy     = 0;
@@ -241,6 +248,8 @@ module axi4_lite_manager #(
             if ( (wr_state != W_IDLE) && (wr_timer >= TIMEOUT)) begin
                 // timeout overrides wr_fault
                 wr_fault = 1;
+                // wr_fault overrides wr_busy
+                wr_busy = 0;
             end
         end
     end

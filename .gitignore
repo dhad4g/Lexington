@@ -1,1 +1,14 @@
 build/
+
+# gcc artifacts
+*.o
+*.elf
+*.bin
+*.hex
+*.dump
+
+# Vivado artifacts
+.Xil/
+*.jou
+*.log
+*.rpt

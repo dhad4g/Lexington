@@ -28,6 +28,6 @@ module ibus #(
     assign rom_rd_en            = rd_en & (~inst_access_fault);
     assign rom_addr             = addr[(ROM_ADDR_WIDTH+2)-1:2];
     assign rd_data              = (rom_rd_en) ? rom_rd_data : 0;
-    assign inst_access_fault    = (address_prefix !== ROM_BASE_ADDR[rv32::XLEN-1:ROM_ADDR_WIDTH+2]);
+    assign inst_access_fault    = (address_prefix != ROM_BASE_ADDR[rv32::XLEN-1:ROM_ADDR_WIDTH+2]);
 
 endmodule

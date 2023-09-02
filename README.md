@@ -1,12 +1,21 @@
 # GPro Lexington RISC-V CPU
 
-The GPro Lexington CPU is the first generation of RISC-V processors designed by [Gerber Prototyping](https://g-proto.com)
+![Status](https://img.shields.io/badge/status-work_in_progress-yellow)
+
+
+The GPro Lexington is the first generation of RISC-V processors designed by [Gerber Prototyping](https://g-proto.com).
+Intended for educational use for simulation, FPGA implementation, and physical design.
+The current toolchain is uses AMD Xilinx Vivado:registered: and the
+[RISC-V GNU Compiler toolchain](https://github.com/riscv-collab/riscv-gnu-toolchain).
+Supported target hardware is the [Digilent:registered: Basys 3 Artix-7 FPGA](https://digilent.com/shop/basys-3-artix-7-fpga-trainer-board-recommended-for-introductory-users/).
+The project is made to be easily adaptable to any Xilinx product.
 
 ## Features
 
 - RV32I instruction set
+- CSR extension
 - Machine-mode only
-- Harvard architecture
+- Modified-Harvard architecture
 - Single cycle execution
 - Machine timer with interrupt support
 - 2 General purpose timer with interrupt support
@@ -14,77 +23,28 @@ The GPro Lexington CPU is the first generation of RISC-V processors designed by 
 - 6 external interrupt pins (2 per GPIO bank)
 - UART interface with interrupt support
 
-The microarchitecture design is documented in [docs/Lexington.md](./docs/Lexington.md).
+## Project Status
 
-<br><br>
+| Component | Docs | Sim | FPGA |
+| --- | --- | --- | --- |
+| Core  | ![](https://img.shields.io/badge/complete-g)      | ![](https://img.shields.io/badge/passing-g)       | ![](https://img.shields.io/badge/failing-red)
+| Debug | ![](https://img.shields.io/badge/missing-grey)    | ![](https://img.shields.io/badge/missing-grey)    | ![](https://img.shields.io/badge/missing-grey)
+| AXI   | ![](https://img.shields.io/badge/complete-g)      | ![](https://img.shields.io/badge/passing-g)       | ![](https://img.shields.io/badge/failing-red)
+| GPIO  | ![](https://img.shields.io/badge/complete-g)      | ![](https://img.shields.io/badge/passing-g)       | ![](https://img.shields.io/badge/failing-red)
+| Timers| ![](https://img.shields.io/badge/partial-yellow)  | ![](https://img.shields.io/badge/untested-orange) | ![](https://img.shields.io/badge/untested-orange)
+| UART  | ![](https://img.shields.io/badge/missing-grey)    | ![](https://img.shields.io/badge/missing-grey)    | ![](https://img.shields.io/badge/missing-grey)
 
-## Progress
+## Getting Started
 
-### Documentation
+The toolchain can be set up using either a Linux environment or a hybrid Windows/WSL environment.
+Some Linux is required as the RISC-V GNU toolchain does not support Windows.
 
-- [x] ROM
-- [x] RAM
-- [ ] Core
-  - [x] Register File
-  - [x] PC
-  - [x] Fetch Unit
-  - [x] Decode Unit
-  - [x] ALU
-  - [x] Load/Store Unit (LSU)
-  - [x] Instruction Bus (IBus)
-  - [x] Data Bus (DBus)
-  - [x] CSR
-  - [x] Trap Unit
-  - [ ] Machine Timer
-- [ ] Peripherals
-  - [x] AXI Manager
-  - [ ] AXI Interconnect
-  - [ ] GP Timer
-  - [x] GPIO
-  - [ ] UART
+### Vivado
 
-### Implementation
+Install Vivado on either Linux or Windows.
+If using Windows, you must also install git for Windows using the default install directory.
 
-- [x] ROM
-- [x] RAM
-- [x] Core
-  - [x] Register File
-  - [x] PC
-  - [x] Fetch Unit
-  - [x] Decode Unit
-  - [x] ALU
-  - [x] Load/Store Unit (LSU)
-  - [x] Instruction Bus (IBus)
-  - [x] Data Bus (DBus)
-  - [x] CSR
-  - [x] Trap Unit
-  - [ ] Machine Timer
-- [ ] Peripherals
-  - [x] AXI Manager
-  - [x] AXI Interconnect
-  - [ ] GP Timer
-  - [x] GPIO
-  - [ ] UART
+### GCC
 
-### Testing
-
-- [ ] ROM
-- [ ] RAM
-- [ ] Core
-  - [x] Register File
-  - [ ] PC
-  - [x] Fetch Unit
-  - [ ] Decode Unit
-  - [x] ALU
-  - [ ] Load/Store Unit (LSU)
-  - [ ] Instruction Bus (IBus)
-  - [ ] Data Bus (DBus)
-  - [ ] CSR
-  - [ ] Trap Unit
-  - [ ] Machine Timer
-- [ ] Peripherals
-  - [ ] AXI Manager
-  - [ ] AXI Interconnect
-  - [ ] GP Timer
-  - [ ] GPIO
-  - [ ] UART
+To install the RISC-V GNU toolchain by following [these instruction](./docs/Toolchain.md).
+If using Windows, this must installed in WSL.

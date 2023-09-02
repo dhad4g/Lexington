@@ -54,10 +54,12 @@ module gpio #(
         HIGH    = 3'b110,
         LOW     = 3'b111
     } mode_t;
-    mode_t int_mode [1:0];
-    assign int_mode = {mode_t'(gpiox_int_conf[5:3]), mode_t'(gpiox_int_conf[2:0])};
+    mode_t int_mode[2];
+    assign int_mode[0] = mode_t'(gpiox_int_conf[2:0]);
+    assign int_mode[1] = mode_t'(gpiox_int_conf[5:3]);
     logic [4:0] int_pin [1:0];
-    assign int_pin = {gpiox_int_conf[15:11], gpiox_int_conf[10:6]};
+    assign int_pin[0] = gpiox_int_conf[10:6];
+    assign int_pin[1] = gpiox_int_conf[15:11];
     // Interrupt state registers
     logic [1:0] startup;    // disable interrupts on first cycle after reset/reconfig
     logic [1:0] prev_mode;  // previous interrupt mode
@@ -65,8 +67,8 @@ module gpio #(
     logic [1:0] prev_val;   // previous value of interrupt pin.
     always_ff @(posedge axi.aclk) begin
         if (!axi.areset_n) begin
-            startup <= 0;
-            interrupts <= 0;
+            startup     <= 0;
+            interrupts  <= 0;
         end
         else begin
             for (integer i=0; i<NUM_INTERRUPTS; i++) begin
@@ -80,6 +82,7 @@ module gpio #(
                             FALLING: interrupts[i]  <= ~gpiox_idata[int_pin[i]] & prev_val[i];
                             HIGH:    interrupts[i]  <= gpiox_idata[int_pin[i]];
                             LOW:     interrupts[i]  <= ~gpiox_idata[int_pin[i]];
+                            default: interrupts[i]  <= 0;
                         endcase
                     end
                 end
@@ -112,7 +115,7 @@ module gpio #(
             _araddr     <= 0;
             axi.arready <= 1;
             axi.rvalid  <= 0;
-            axi.rresp   <= axi.rresp.OKAY;
+            axi.rresp   <= axi.OKAY;
         end
         else begin
             case (rd_state)
@@ -122,7 +125,7 @@ module gpio #(
                         axi.arready <= 0;
                         axi.rvalid  <= 1;
                         _araddr     <= axi.araddr;
-                        axi.rresp   <= (|_araddr[1:0]) ? axi.rresp.SLVERR : axi.rresp.OKAY;
+                        axi.rresp   <= (|_araddr[1:0]) ? axi.SLVERR : axi.OKAY;
                     end
                 end
                 R_VALID: begin // rvalid asserted, waiting for rready
@@ -169,7 +172,10 @@ module gpio #(
             axi.awready <= 1;
             axi.wready  <= 0;
             axi.bvalid  <= 0;
-            axi.bresp   <= axi.bresp.OKAY;
+            axi.bresp   <= axi.OKAY;
+            gpiox_mode  <= 0;
+            gpiox_odata <= 0;
+            gpiox_int_conf <= 0;
         end
         else begin
             case (wr_state)
@@ -179,9 +185,6 @@ module gpio #(
                         _awaddr     <= axi.awaddr;
                         axi.awready <= 0;
                         axi.wready  <= 1;
-                        gpiox_mode  <= 0;
-                        gpiox_odata <= 0;
-                        gpiox_int_conf <= 0;
                     end
                 end
                 W_READY: begin // wready asserted, waiting for wvalid
@@ -190,13 +193,13 @@ module gpio #(
                         axi.wready  <= 0;
                         axi.bvalid  <= 1;
                         // default to OKAY response
-                        axi.bresp   <= axi.bresp.OKAY;
+                        axi.bresp   <= axi.OKAY;
                         case (_awaddr)
                             4'h0: gpiox_mode    <= axi.wdata;
-                            4'h4: axi.bresp     <= axi.bresp.SLVERR; // read-only
+                            4'h4: axi.bresp     <= axi.SLVERR; // read-only
                             4'h8: gpiox_odata   <= axi.wdata;
                             4'hC: gpiox_int_conf<= axi.wdata;
-                            default: axi.bresp  <= axi.bresp.SLVERR; // address misaligned
+                            default: axi.bresp  <= axi.SLVERR; // address misaligned
                         endcase
                     end
                 end

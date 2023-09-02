@@ -6,6 +6,8 @@
 
 package lexington;
 
+    localparam DEFAULT_CLK_PERIOD       = 10.0;             // core clock period in ns
+
     localparam DEFAULT_ROM_ADDR_WIDTH   = 10;               // word-addressable ROM address bits
     localparam DEFAULT_RAM_ADDR_WIDTH   = 10;               // word-addressable RAM address bits
     localparam DEFAULT_AXI_ADDR_WIDTH   = 29;               // byte-addressable AXI address space bits
@@ -68,7 +70,7 @@ package lexington;
 
 
     // Implementation Specific Interrupts
-    localparam TRAP_CODE_UART0RX                = 16;       // UART 0 RX interrupt
+    localparam TRAP_CODE_UART0RX                = 16;       // UART 0 RX interrupt(\s*).*axi_m.(\w*\s*).*
     localparam TRAP_CODE_UART0TX                = 17;       // UART 0 TX interrupt
     localparam TRAP_CODE_TIM0                   = 18;       // general-purpose timer 0 interrupt
     localparam TRAP_CODE_TIM1                   = 19;       // general-purpose timer 1 interrupt
@@ -82,30 +84,30 @@ package lexington;
 
     // Interrupt CSR typedef
     typedef struct packed {
-        logic [5:0] reserved31_26;
-        logic GPIOC1;
-        logic GPIOC0;
-        logic GPIOB1;
-        logic GPIOB0;
-        logic GPIOA1;
-        logic GPIOA0;
-        logic TIM1;
-        logic TIM0;
-        logic UART0TX;
-        logic UART0RX;
-        logic [3:0] reserved15_12;
-        logic MEI;
-        logic reserved10;
-        logic SEI;
-        logic reserved8;
-        logic MTI;
-        logic reserved6;
-        logic STI;
-        logic reserved4;
-        logic MSI;
-        logic reserved2;
-        logic SSI;
-        logic reserved0;
+        logic [5:0] reserved31_26;      // 31:26
+        logic GPIOC1;                   // 25
+        logic GPIOC0;                   // 24
+        logic GPIOB1;                   // 23
+        logic GPIOB0;                   // 22
+        logic GPIOA1;                   // 21
+        logic GPIOA0;                   // 20
+        logic TIM1;                     // 19
+        logic TIM0;                     // 18
+        logic UART0TX;                  // 17
+        logic UART0RX;                  // 16
+        logic [3:0] reserved15_12;      // 15:12
+        logic MEI;                      // 11
+        logic reserved10;               // 10
+        logic SEI;                      // 9
+        logic reserved8;                // 8
+        logic MTI;                      // 7
+        logic reserved6;                // 6
+        logic STI;                      // 5
+        logic reserved4;                // 4
+        logic MSI;                      // 3
+        logic reserved2;                // 2
+        logic SSI;                      // 1
+        logic reserved0;                // 0
     } interrupt_csr_t;
 
 

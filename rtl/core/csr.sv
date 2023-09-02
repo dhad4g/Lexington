@@ -327,6 +327,9 @@ module csr #(
                     rv32::csr_addr_timeh: begin
                         // read-only
                     end
+                    default: begin
+                        // nothing
+                    end
                 endcase
                 // Machine-Mode CSRs
                 if (priv >= rv32::mmode) begin
@@ -391,6 +394,9 @@ module csr #(
                         end
                         rv32::csr_addr_mconfigptr: begin
                             // read-only
+                        end
+                        default: begin
+                            // nothing
                         end
                     endcase
                 end // if(priv >= mmode)

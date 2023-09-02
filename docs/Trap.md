@@ -27,6 +27,7 @@ This document uses the RISC-V Specification definitions of *trap*, *exception*, 
 - **`csr_addr[CSR_ADDR_WIDTH-1:0]`** CSR read/write address
 - **`csr_wr_data[WIDTH-1:0]`** CSR write data
 - **`mret`** machine-mode return flag
+- **`dbus_wait`** flag indicating dbus transaction requires extra cycle
   
 *exception flags*
 - **`inst_access_fault`** instruction access fault flag, from fetch
@@ -66,6 +67,8 @@ This document uses the RISC-V Specification definitions of *trap*, *exception*, 
 
 At reset, the Trap Unit sets the PC to `BOOT_ADDR`.
 During operation, if no exception or interrupt flags are asserted, `next_pc` gets `decoder_next_pc` and the `trap` flag is low
+
+If the `dbus_wait` flag is asserted, the Trap Unit must always wait for the instruction to complete by assigning `next_pc` to `pc`.
 
 ### Exceptions
 

@@ -10,7 +10,7 @@ The AXI4-Lite Crossbar connects multiple subordinates to a single manager.
 - **`WIDTH = 32`** data bus width
 - **`ADDR_WIDTH = 32`** upstream manager address width
 - **`COUNT = 2`** number of downstream subordinates
-- **`S_ADDR_WIDTH = [4,4]`** array of downstream subordinate address widths
+- **`S_ADDR_WIDTH = 4`** downstream subordinate address width
 - **`S_BASE_ADDR = [0x0000_0000,0x0000_0010]`** array of downstream subordinate base addresses
 
 ***Important:** address spaces must not overlap!*
@@ -26,6 +26,7 @@ The AXI4-Lite Crossbar connects multiple subordinates to a single manager.
 ## Behavior
 
 The AXI4-Lite crossbar decodes address from the upstream manager an routes transactions to the appropriate downstream subordinate.
+All subordinates must have the same address width.
 
 ### Memory Map
 

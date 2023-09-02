@@ -6,28 +6,21 @@ RTL_SRC_DIR="${PROJ_DIR}/rtl"
 INC_DIR="${PROJ_DIR}/rtl"
 TB_DIR="${PROJ_DIR}/testbench"
 
-XVLOG_OPTIONS="-sv -i ${INC_DIR}"
+XVLOG_OPTS="-sv -i ${INC_DIR}"
+XELAB_OPTS="-debug typical"
+XSIM_OPTS=""
 
 
-RED="\x1b[31m"
-GREEN="\x1b[32m"
-YELLOW="\x1b[33m"
-BLUE="\x1b[34m"
-NORMAL="\x1b[0m"
-
-SUCCESS_FORMAT="s,(PASS(ED)?|SUCCESS),$GREEN\1$NORMAL,I" # highlight green
-WARN_FORMAT="s,(.*WARN.*),$YELLOW\1$NORMAL,I" # highlight yellow
-ERROR_FORMAT="s,(.*(FAIL|ERROR).*),$RED\1$NORMAL,I" # highlight red
-ERROR2_FORMAT="s,((FAIL|ERROR):?)(\s)(.*/)([^/]+\.s?v((.?\sLine)?:?\s?[0-9]+)?)(.*),$RED\1\3$BLUE\5$RED\3\4\5\8$NORMAL,I" # display filename and line at beginning
-OUT_FORMAT="sed -E $SUCCESS_FORMAT;$WARN_FORMAT;$ERROR_FORMAT;$ERROR2_FORMAT"
+# Include common functions and definitions such as OUT_FILTER and special_exec()
+source "${PROJ_DIR}/scripts/utils.sh"
 
 
 function usage {
     cat <<USAGE_EOF
 
-usage: $SCRIPT_NAME [OPTION]... [MODULE]...
+usage: $SCRIPT_NAME [option]... <module>...
 
-    <module>    Name of module test
+    <module>        Name of module test
 
     -a, --all       Run tests for all modules
         --check     Compile and elaborate only (no sim)
@@ -43,17 +36,6 @@ if  [ $# -eq 0 ]; then
     usage
     exit 1
 fi
-
-# Function for WSL support
-function special_exec () {
-    which powershell.exe > /dev/null
-    if [ "$?" == "0" ]; then
-        args=$(echo "$@" | sed -e 's,/mnt/c/,C:/,g')
-        "/mnt/c/Program Files/Git/bin/bash.exe" -c "$args"
-    else
-        $@
-    fi
-}
 
 
 function sim() {
@@ -78,32 +60,22 @@ function sim() {
     cd "build/sim/$module_path"
 
     # find dependencies
-    readarray -t dependencies < <(grep --no-filename -E '^//depend ' "$source" "$testbench" | sed -e 's/^\/\/depend //' )
     sv_files="$source $testbench"
-    for i in "${!dependencies[@]}"; do
-        dependencies[i]="${RTL_SRC_DIR}/${dependencies[$i]}"
-        sv_files="$sv_files ${dependencies[$i]}"
-        echo "    ${dependencies[$i]}"
-    done
+    parse_depends $source "$RTL_SRC_DIR"
+    sv_files="$sv_files $rval"
+    parse_depends $testbench "$RTL_SRC_DIR"
+    sv_files="$sv_files $rval"
+    #sv_files="$sv_files $(parse_depends $source \'$RTL_SRC_DIR\')"
+    #sv_files="$sv_files $(parse_depends $testbench \'$RTL_SRC_DIR\')"
     echo
 
-    # execute special commands
-    readarray -t cmds < <(grep --no-filename -E '^//cmd ' "$source" "$testbench" | sed -e 's/^\/\/cmd //' | sed -e "s,\\\${PROJ_DIR},$PROJ_DIR,g")
-    for i in "${!cmds[@]}"; do
-        echo "${cmds[$i]}"
-        bash -c "${cmds[$i]}" # run each cmd in it's own subshell
-        rval=$PIPESTATUS
-        echo
-        if [ "$rval" != "0" ]; then
-            >&2 echo -e "${RED}FAIL: User command failed with exit code $rval"
-            >&2 echo
-            return $rval
-        fi
-    done
+    # execute macro commands
+    exec_macro_cmds "$source" "LEXINGTON_SIM=1"
+    exec_macro_cmds "$testbench" "LEXINGTON_SIM=1"
     echo
 
     # compile
-    special_exec xvlog $XVLOG_OPTIONS $sv_files | $OUT_FORMAT
+    special_exec xvlog $XVLOG_OPTS $sv_files | $OUT_FORMAT
     rval=$PIPESTATUS
     if [ "$rval" == "0" ]; then
         echo
@@ -111,14 +83,14 @@ function sim() {
         echo
     else
         >&2 echo
-        >&2 echo -e "${RED}FAIL: Compile failed for $module_path${NORMAL}"
+        >&2 echo -e "${RED}FAIL: Compile failed for $module_path. Exit code ${rval}${NORMAL}"
         >&2 echo "Check build/sim/$module_path/xvlog.log"
         >&2 echo
         return $rval
     fi
 
     # elaborate
-    special_exec xelab -debug typical -s sim ${module}_TB | $OUT_FORMAT
+    special_exec xelab $XELAB_OPTS -s sim ${module}_TB | $OUT_FORMAT
     rval=$PIPESTATUS
     if [ "$rval" = "0" ]; then
         echo
@@ -126,7 +98,7 @@ function sim() {
         echo
     else
         >&2 echo
-        >&2 echo -e "${RED}FAIL: Elaborate failed for $module_path${NORMAL}"
+        >&2 echo -e "${RED}FAIL: Elaborate failed for $module_path. Exit code ${rval}${NORMAL}"
         >&2 echo "Check build/sim/$module_path/xelab.log"
         >&2 echo
         return $rval
@@ -136,14 +108,14 @@ function sim() {
     if $check_only; then
         return $rval
     else
-        special_exec xsim --runall sim | $OUT_FORMAT
+        special_exec xsim $XSIM_OPTS --runall sim | $OUT_FORMAT
         rval=$PIPESTATUS
         if [ "$rval" = "0" ]; then
             #echo -e "${BLUE}Simulate for $module complete${NORMAL}"
             echo
         else
             >&2 echo
-            >&2 echo -e "${RED}FAIL: Simulate failed for $module_path${NORMAL}"
+            >&2 echo -e "${RED}FAIL: Simulate failed for $module_path. Exit code ${rval}${NORMAL}"
             >&2 echo
             return $rval
         fi
@@ -190,13 +162,13 @@ if $all; then
     modules=$(find $TB_DIR | grep -E '_TB\.sv$' | sed -e 's/_TB\.sv$//' | sed -e "s/${TB_DIR}\///")
 fi
 
-fail=0
+fail=false
 summary="Simulation testing complete"
 for module in $modules; do
     sim $module $check_only
     rval=$?
     if [ "$rval" != "0" ]; then
-        fail=1
+        fail=true
         echo
         >&2 echo -e "Test for module $module ${RED}FAILED${NORMAL}. Exit value $rval"
         summary="${summary}\n${module} ${RED}FAILED${NORMAL}"
@@ -206,9 +178,12 @@ for module in $modules; do
     echo ""
 done
 
-if [[ $fail -gt 0 ]]; then
+if $fail; then
+    echo ""
+    echo -e "One or more modules ${RED}FAILED${NORMAL}"
+    exit 1
+else
     echo ""
     echo -e "All modules ${GREEN}PASSED${NORMAL}"
 fi
 
-exit $fail

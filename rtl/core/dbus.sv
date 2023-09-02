@@ -81,7 +81,7 @@ module dbus #(
 
 
     // Set data_misaligned, load_store_n, and dbus_wait
-    assign data_misaligned  = (rd_en | wr_en) & (|(addr[rv32::ADDR_BITS_IN_WORD-1:0]));
+    assign data_misaligned  = (rd_en | wr_en) & ((addr[rv32::ADDR_BITS_IN_WORD-1:0]));
     assign load_store_n     = rd_en;
     assign dbus_wait        = ((rd_en | wr_en) && USE_AXI && is_axi_addr) ? axi_busy : 0;
     assign dbus_err         = data_misaligned | data_access_fault;
@@ -102,9 +102,10 @@ module dbus #(
         mtime_wr_en = 0;
         axi_rd_en = 0;
         axi_wr_en = 0;
+        rd_data   = 0;
         if (!data_misaligned) begin
             if (is_rom_addr) begin
-                if (wr_en) begin // write permission prohibitted
+                if (wr_en) begin // write permission prohibited
                     data_access_fault = 1;
                     rd_data = 0;
                 end
@@ -124,6 +125,7 @@ module dbus #(
                 rd_data = mtime_rd_data;
             end
             else if (USE_AXI && is_axi_addr) begin
+                data_access_fault = axi_access_fault;
                 axi_rd_en = rd_en;
                 axi_wr_en = wr_en;
                 rd_data = axi_rd_data;

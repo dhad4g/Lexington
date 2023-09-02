@@ -15,7 +15,9 @@
 `include "lexington.sv"
 import lexington::*;
 
+
 module core #(
+        parameter real CLK_PERIOD   = DEFAULT_CLK_PERIOD,           // system clock period in ns
         parameter ROM_ADDR_WIDTH    = DEFAULT_ROM_ADDR_WIDTH,       // ROM address width (word-addressable, default 4kB)
         parameter RAM_ADDR_WIDTH    = DEFAULT_RAM_ADDR_WIDTH,       // RAM address width (word-addressable, default 4kB)
         localparam MTIME_ADDR_WIDTH = 2,
@@ -390,6 +392,7 @@ module core #(
                 .csr_addr,
                 .csr_wr_data,
                 .mret,
+                .dbus_wait,
                 .inst_access_fault,
                 .inst_misaligned,
                 .illegal_inst,
@@ -419,7 +422,7 @@ module core #(
             );
     end // if (USE_TRAP)
     else begin
-        assign next_pc = decoder_next_pc;
+        assign next_pc = (dbus_wait) ? pc : decoder_next_pc;
         assign trap_rd_data = 0;
         assign trap = 0;
     end // if/else (USE_TRAP)

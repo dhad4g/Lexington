@@ -1,7 +1,7 @@
 //depend rom.sv
 //depend ram.sv
-//cmd cd ${PROJ_DIR}/sw/examples/core_test && make build dump
-//cmd cp ${PROJ_DIR}/sw/examples/core_test/rom.hex .
+//cmd cd ${PROJ_DIR}/sw/projects/core_test && make build dump
+//cmd cp ${PROJ_DIR}/sw/projects/core_test/rom.hex .
 `timescale 1ns/1ps
 
 `include "rv32.sv"

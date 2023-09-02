@@ -132,7 +132,7 @@ module decoder #(
             OP_IMM:     immediate = { {20{inst[31]}}, inst[31:20] }; // sign-extended 12-bit imm[11:0]
             LUI, AUIPC: immediate = { inst[31:12], {12{1'b0}} }; // 20-bit upper-immediate imm[31:12], lower bits zero filled
             JAL:        immediate = { {12{inst[31]}}, inst[19:12], inst[20], inst[30:21], 1'b0 }; // sign-extended 20-bit imm[20:1], lowest bit zeroed
-            JAL:        immediate = { {20{inst[31]}}, inst[31:20] }; // sign-extended 12-bit imm[11:0]
+            JALR:       immediate = { {20{inst[31]}}, inst[31:20] }; // sign-extended 12-bit imm[11:0]
             BRANCH:     immediate = { {20{inst[31]}}, inst[7], inst[30:25], inst[11:8], 1'b0 }; // signed-extended 12-bit imm[12:1], lowest bit zeroed
             LOAD:       immediate = { {20{inst[31]}}, inst[31:20] }; // sign-extended 12-bit imm[11:0]
             STORE:      immediate = { {20{inst[31]}}, inst[31:25], inst[11:7] }; // sign-extended 12-bit imm[11:0]

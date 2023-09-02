@@ -56,11 +56,13 @@ Then, simply run the following command:
 mkdir build
 cd build
 sudo mkdir /opt/riscv
-../configure --prefix=/opt/riscv --enable-multilib
+../configure --prefix=/opt/riscv --with-arch=rv32i_zicsr --with-abi=ilp32
 sudo make
 ```
 
 The installation can be completed without root privilege by choosing an installation directory other than `/opt/riscv/`.
+
+The `--with-arch` and `--with-abi` options must be used when targeting the `zicsr` extension.
 
 ### Add to PATH
 

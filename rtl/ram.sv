@@ -5,6 +5,7 @@
 import lexington::*;
 
 
+(* keep_hierarchy = "yes" *)
 module ram #(
         parameter ADDR_WIDTH    = DEFAULT_RAM_ADDR_WIDTH,   // word-addressable address bits
         parameter DUMP_MEM      = 0                         // set to one to enable dump of memory content
@@ -26,24 +27,22 @@ module ram #(
 
     assign rd_data = (rd_en) ? data[addr] : 0;
 
-    genvar i;
     generate
-    for (i=0; i<rv32::XLEN; i+=8) begin
-        always_ff @(posedge clk) begin
-            if (wr_en & wr_strobe[i/8]) begin
-                data[addr][i+7:i] <= wr_data[i+7:i];    // write byte lane
+        for (genvar i=0; i<rv32::XLEN; i+=8) begin
+            always_ff @(posedge clk) begin
+                if (wr_en & wr_strobe[i/8]) begin
+                    data[addr][i+7:i] <= wr_data[i+7:i];    // write byte lane
+                end
             end
         end
-    end
     endgenerate
 
     // Dump memory for simulation
-    genvar dump_i;
     generate
     if (DUMP_MEM) begin
-        for (dump_i=0; dump_i<DEPTH; dump_i++) begin
+        for (genvar i=0; i<DEPTH; i++) begin
             rv32::word _data;
-            assign _data = data[dump_i];
+            assign _data = data[i];
         end
     end
     endgenerate

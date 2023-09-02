@@ -55,6 +55,9 @@ module trap #(
         // Trap return
         input  logic mret,
 
+        // Instruction incomplete flag(s)
+        input  logic dbus_wait,
+
         // Global Exception and Trap Flags
         output logic exception,
         output logic trap
@@ -77,19 +80,19 @@ module trap #(
     assign mtvec_base_vectored = {mtvec[31:7], 7'b0};
 
     // MIP standard interrupt causes read-only
-    assign mip.reserved15_12 = 0;
-    assign mip.MEI = 0;
-    assign mip.reserved10 = 0;
-    assign mip.SEI = 0;
-    assign mip.reserved8 = 0;
-    assign mip.MTI = mtime_int;
-    assign mip.reserved6 = 0;
-    assign mip.STI = 0;
-    assign mip.reserved4 = 0;
-    assign mip.MSI = 0;
-    assign mip.reserved2 = 0;
-    assign mip.SSI = 0;
-    assign mip.reserved0 = 0;
+    // assign mip.reserved15_12 = 0;
+    // assign mip.MEI = 0;
+    // assign mip.reserved10 = 0;
+    // assign mip.SEI = 0;
+    // assign mip.reserved8 = 0;
+    // assign mip.MTI = mtime_int;
+    // assign mip.reserved6 = 0;
+    // assign mip.STI = 0;
+    // assign mip.reserved4 = 0;
+    // assign mip.MSI = 0;
+    // assign mip.reserved2 = 0;
+    // assign mip.SSI = 0;
+    // assign mip.reserved0 = 0;
     // mepc read-only
     assign mepc[1:0] = 0;
 
@@ -108,8 +111,10 @@ module trap #(
             next_pc     = RESET_ADDR;
             exception   = 0;
             trap        = 0;
+            _mcause     = -1;
         end
         else begin
+            _mcause     = -1;
 
             // Set exception, trap, & _mcause
             if (inst_access_fault) begin
@@ -154,11 +159,11 @@ module trap #(
                 trap        = 0;    // overwritten if interrupt trap occurs
                 _mcause     = 0;    // overwritten if interrupt trap occurs
                 if (global_mie) begin
-                    for (integer i=0; i<rv32::XLEN; i++) begin
+                    for (integer i=0; i<rv32::XLEN; i=i+1) begin
                         if (mip[i] && mie[i]) begin
                             trap    = 1;
                             _mcause = i;
-                            i = rv32::XLEN; // exit loop
+                            break; // exit loop
                         end
                     end
                 end
@@ -168,6 +173,9 @@ module trap #(
             // Set next_pc
             if (_reset) begin
                 next_pc = RESET_ADDR;
+            end
+            else if (dbus_wait) begin
+                next_pc = pc;
             end
             else begin
                 if (trap) begin
