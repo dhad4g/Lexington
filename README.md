@@ -23,6 +23,8 @@ The project is made to be easily adaptable to any Xilinx product.
 - 6 external interrupt pins (2 per GPIO bank)
 - UART interface with interrupt support
 
+Microarchitecture documentation can be found in [docs/Lexington.md](./docs/Lexington.md)
+
 ## Project Status
 
 | Component | Docs | Sim | FPGA |
