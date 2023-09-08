@@ -1,8 +1,8 @@
 //depend lexington_soc.sv
 //depend core.sv
 //depend core/*.sv
-//depend rom.sv
-//depend ram.sv
+//depend mem/rom.sv
+//depend mem/ram.sv
 //depend axi4_lite_manager.sv
 //depend axi4_lite_crossbar.sv
 //depend peripheral/gpio.sv

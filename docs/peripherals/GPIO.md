@@ -18,7 +18,7 @@ Interrupts support both edge and level triggers.
 
 ### Inputs
 
-- **`axi_s`** axi subordinate interface
+- **`axi_s`** AXI subordinate interface
 
 ### Outputs
 
@@ -34,10 +34,10 @@ Read and write access to these registers occurs synchronous to the AXI clock.
 **Table 1.** GPIO Memory Mapped Registers
 | Address Offset | Default Value | R/W | Name | Description |
 | --- | --- | --- | --- | --- |
-| 0x0 | 0 | r/w | `GPIOx_MODE`      | sets each pin as input or output (0=input,1=output)
-| 0x4 | - | r/- | `GPIOx_IDATA`     | input value for each pin (0=low,1=high)
-| 0x8 | 0 | r/w | `GPIOx_ODATA`     | output value for each pin (0=low,1=high)
-| 0xC | 0 | r/w | `GPIOx_INT_CONF`  | interrupt configuration register
+| 0x0 | 0 | r/w | `gpiox_mode`      | sets each pin as input or output (0=input,1=output)
+| 0x4 | - | r/- | `gpiox_idata`     | input value for each pin (0=low,1=high)
+| 0x8 | 0 | r/w | `gpiox_odata`     | output value for each pin (0=low,1=high)
+| 0xC | 0 | r/w | `gpiox_int_conf`  | interrupt configuration register
 
 Bit *i* of the `mode`, `idata`, and `odata` registers corresponds to pin *i*.
 Data in the `idata` register is read asynchronously from the I/O pins.
@@ -46,7 +46,7 @@ The *int_conf* register encoding is shown in Figure 1.
 
 ![](../figures/GPIO_interrupt_register.drawio.svg)
 
-**Figure 1.** `GPIOx_INT_CONF` register encoding
+**Figure 1.** `gpiox_int_conf` register encoding
 
 The int*x*_mode fields set the mode of interrupt *x*.
 

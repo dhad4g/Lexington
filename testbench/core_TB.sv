@@ -1,5 +1,5 @@
-//depend rom.sv
-//depend ram.sv
+//depend mem/rom.sv
+//depend mem/ram.sv
 //cmd cd ${PROJ_DIR}/sw/projects/core_test && make build dump
 //cmd cp ${PROJ_DIR}/sw/projects/core_test/rom.hex .
 `timescale 1ns/1ps
