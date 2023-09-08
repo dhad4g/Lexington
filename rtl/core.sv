@@ -17,7 +17,7 @@ import lexington::*;
 
 
 module core #(
-        parameter real CLK_PERIOD   = DEFAULT_CLK_PERIOD,           // system clock period in ns
+        parameter CLK_PERIOD        = DEFAULT_CLK_PERIOD,           // system clock period in ns
         parameter ROM_ADDR_WIDTH    = DEFAULT_ROM_ADDR_WIDTH,       // ROM address width (word-addressable, default 4kB)
         parameter RAM_ADDR_WIDTH    = DEFAULT_RAM_ADDR_WIDTH,       // RAM address width (word-addressable, default 4kB)
         localparam MTIME_ADDR_WIDTH = 2,

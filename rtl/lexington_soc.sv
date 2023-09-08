@@ -14,7 +14,7 @@ import lexington::*;
 
 
 module lexington_soc #(
-        parameter real CLK_PERIOD   = DEFAULT_CLK_PERIOD    // system clock period in ns
+        parameter CLK_PERIOD    = DEFAULT_CLK_PERIOD    // system clock period in ns
     ) (
         input  logic clk,                       // system clock
         input  logic rst_n,                     // reset signal (active-high)
