@@ -47,8 +47,16 @@ class Module:
         self.delay = 0.0
         self.cells = 0
         self.raw = []
+        self.in_port = ""
+        self.out_port = ""
     def addCell(self, line:str) -> None:
         line = line.strip()
+        if (line.__contains__("<-")):
+            port = re.search(r"(?<=/)\S*?(?=\s)", line)[0]
+            if (self.in_port):
+                self.out_port = port
+            else:
+                self.in_port = port
         raw = (
             re.search(r"^\S*(\s\(\S*\)?)", line)[0],
             float(re.search(r"\d+\.\d+", line)[0])
@@ -57,11 +65,25 @@ class Module:
         self.cells += 1
         self.raw.append(raw)
     def asList(self) -> List[str]:
+        _in = self.in_port if self.in_port else ""
+        _out = f"-> {self.out_port}" if self.in_port else ""
         return [
             self.name,
+            _in,
+            _out,
             f"{self.delay:0.2f}",
             "",
-            f"{self.cells} cells"
+            f"{self.cells}"
+        ]
+    @staticmethod
+    def listHeadings() -> List[str]:
+        return [
+            "MODULE",
+            "IN PORT",
+            "OUT PORT",
+            "DELAY",
+            "",
+            "CELLS"
         ]
 
 class Path:
@@ -77,7 +99,7 @@ class Path:
         self.cells += module.cells
         self.modules.append(module)
     def tabulate(self, visualize=True) -> str:
-        arr = []
+        arr = [Module.listHeadings()]
         for module in self.modules:
             x = module.asList()
             if visualize:
@@ -85,7 +107,7 @@ class Path:
                 width = int(20*module.delay)
                 x.append(f"{'*'*width}")
             arr.append(x)
-        arr.append(["TOTAL",f"{self.delay:.2f}", "", f"{self.cells} cells"])
+        arr.append(["TOTAL", "", "", f"{self.delay:.2f} ns", "", f"{self.cells} cells"])
         table = tabulate(arr, tablefmt="plain")
         ret = "".join("  "+line for line in table.splitlines(True)) # add indent
         return ret
@@ -157,6 +179,7 @@ def parseTimingReport(filename:str) -> List[Path]:
         path = None # current path
         module = None # current module
         state = 'startpoint'
+        prev_line = None # used when data is split across 2 lines
         for line in file.readlines():
             # if (len(paths) >= args.max):
             #     break
@@ -189,13 +212,22 @@ def parseTimingReport(filename:str) -> List[Path]:
                     paths.append(path)
                     state = 'startpoint'
                 else:
-                    # Get this cell's delay
-                    curr = re.search(r"^[^/]*", line)[0]
-                    if (curr != module.name):
-                        # Next module
-                        path.addModule(module)
-                        module = Module(curr)
-                    module.addCell(line)
+                    # Not at end yet
+                    if (prev_line):
+                        # get second half of data split across lines
+                        line = prev_line+" "+line
+                        prev_line = None
+                    elif (line.endswith("<-")):
+                        # data is split across 2 lines
+                        prev_line = line
+                    if (not prev_line): # only if not across split line
+                        # Get this cell's delay
+                        curr = re.search(r"^[^/]*", line)[0]
+                        if (curr != module.name):
+                            # Next module
+                            path.addModule(module)
+                            module = Module(curr)
+                        module.addCell(line)
         return paths
 
 
@@ -216,7 +248,7 @@ def main() -> None:
     for i in ids:
         path = paths[i]
         if args.verbose:
-            label = f"#{i}  {path.startpoint} -> {path.endpoint}    {path.delay:.2f}"
+            label = f"#{i}  {path.startpoint} -> {path.endpoint}    {path.delay:.2f} ns"
             print(label)
             if args.verbose2:
                 print("-"*len(label))
@@ -231,11 +263,11 @@ def main() -> None:
             # print minimal
             indent = 6
             id = (f"#{i}")
-            id = (id + (" ")*indent)[:indent]
-            graph = path.visualize().splitlines(True)
-            graph[0] = (" "*indent) + graph[0]
-            graph[1] = id + graph[1]
-            graph[2] = (" "*indent) + graph[2]
+            id = (id + (" "*indent))[:indent]
+            graph = path.visualize().splitlines()
+            graph[0] = (" "*indent) + graph[0] + "\n"
+            graph[1] = id + graph[1] + f"  {path.delay} ns\n"
+            graph[2] = (" "*indent) + graph[2] + "\n"
             print("".join(graph))
 
 
