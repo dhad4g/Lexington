@@ -13,25 +13,31 @@ lappend search_path $incDir
 
 # Parse arguments
 if { ![info exists top] } {
-    puts "Error: top module must be set"
+    puts "Error: top module 'top' must be set"
     exit 1
 }
-set top_src "${rtlDir}/${top}.sv"
+if { ![info exists top_src] } {
+    puts "Error: top module source 'top_src' must be set"
+}
 # puts "Top Module: $top_src"
 
 # Parse dependencies
-set dependencies [exec grep -E "^//depend " $top_src | sed -e "s,^//depend ,${rtlDir}/,"]
-set dependencies [split $dependencies "\n"]
+catch {set dependencies [exec grep -E "^//depend " $top_src | sed -e "s,^//depend ,${rtlDir}/,"]}
+if { [info exists dependencies] } {
+    set dependencies [split $dependencies "\n"]
+}
 # puts "Dependencies:"
 # puts "$dependencies"
 
-set_attr auto_ungroup false
+# set_attr auto_ungroup false
 
 
 # Compile
 analyze -format sverilog $top_src
-foreach depend $dependencies {
-    analyze -format sverilog [ glob $depend ]
+if { [info exists dependencies] } {
+    foreach depend $dependencies {
+        analyze -format sverilog [ glob $depend ]
+    }
 }
 
 # Check

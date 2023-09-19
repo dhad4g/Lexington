@@ -1,6 +1,7 @@
 #!/bin/bash
 
 PROJ_DIR="$(dirname -- "$(readlink -f "${BASH_SOURCE}")")"
+RTL_SRC_DIR="${PROJ_DIR}/rtl"
 
 DC_OPTS=""
 PT_OPTS=""
@@ -15,9 +16,11 @@ usage: $SCRIPT_NAME [option]... <top_module>
 
     <top_module>        Name of top module for synthesis
 
-    -i                  enable interractive mode
+    -i                  enable interactive mode
     --sta               Performs static timing analysis after synthesis
     --sta-only          Skip synthesis and only run STA
+    --wrap              Wrap combinatorial module for static timing analysis
+    --clk               If wrapping, name of clock input port (default: clk)
     --clean             Clean the build directory before starting
     -h, --help          Prints this usage message
 USAGE_EOF
@@ -31,9 +34,11 @@ fi
 
 # Parse args
 top=""
-interract=false
+interact=false
 synth=true
 sta=false
+wrap=true
+clk="clk"
 clean=false
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -42,8 +47,8 @@ while [[ $# -gt 0 ]]; do
             exit 0
             ;;
         -i)
-            interract=true
-            echo "Using interractive mode"
+            interact=true
+            echo "Using interactive mode"
             shift
             ;;
         --sta)
@@ -58,13 +63,23 @@ while [[ $# -gt 0 ]]; do
             echo "Running Static Timing Analysis"
             shift
             ;;
+        --wrap)
+            wrap=true
+            echo "Wrapping combinatorial module for Static Timing Analysis"
+            shift
+            ;;
+        --clk)
+            shift
+            clk=("$1")
+            shift
+            ;;
         --clean)
             clean=true
             echo "Cleaning build directory"
             shift
             ;;
         -* | --*)
-            >&2 echo "Unkown argument $1"
+            >&2 echo "Unknown argument $1"
             exit 1
             ;;
         *)
@@ -79,26 +94,56 @@ while [[ $# -gt 0 ]]; do
 done
 
 
-BUILD_DIR="${PROJ_DIR}/build/synth/$top"
+top_path="$top"
+top_src="${RTL_SRC_DIR}/${top}.sv"
+top=$(echo "$top_path" | sed -E 's,.*/,,')
+BUILD_DIR="${PROJ_DIR}/build/synth/${top_path}"
+
 if $clean; then
     rm -rf $BUILD_DIR
 fi
 mkdir -p $BUILD_DIR
 cd $BUILD_DIR
 
-TCL_CMD="set top $top"
+if $wrap; then
+    top_dest="${BUILD_DIR}/${top}_wrapper.sv"
+    "${PROJ_DIR}/scripts/make-comb-wrapper.py" "$top_src" --clk "$clk" > "${top_dest}"
+    rval=$?
+    if [ "$rval" != "0" ]; then
+        echo "Wrapper script failed"
+        exit $rval
+    fi
+    top="${top}_wrapper"
+    top_src="$top_dest"
+fi
+
+TCL_CMD="set top $top; set top_src $top_src"
 if $synth; then
-    if $interract && (! $sta); then
-        dc_shell $DC_OPTS -f "${PROJ_DIR}/scripts/dc.tcl" -x "$TCL_CMD; set interract 1"
+    if $interact && (! $sta); then
+        dc_shell $DC_OPTS -f "${PROJ_DIR}/scripts/dc.tcl" -x "$TCL_CMD; set interact 1"
+        rval=$?
     else
         dc_shell $DC_OPTS -f "${PROJ_DIR}/scripts/dc.tcl" -x "$TCL_CMD" | $OUT_FORMAT
+        rval=$?
+    fi
+    if [ "$rval" != "0" ]; then
+        echo
+        echo "Synthesis failed"
+        exit $rval
     fi
 fi
 
 if $sta; then
-    if $interract; then
-        pt_shell $PT_OPTS -f "${PROJ_DIR}/scripts/pt.tcl" -x "$TCL_CMD; set interract 1"
+    if $interact; then
+        pt_shell $PT_OPTS -f "${PROJ_DIR}/scripts/pt.tcl" -x "$TCL_CMD; set interact 1"
+        rval=$?
     else
         pt_shell $PT_OPTS -f "${PROJ_DIR}/scripts/pt.tcl" -x "$TCL_CMD" | $OUT_FORMAT
+        rval=$?
+    fi
+    if [ "$rval" != "0" ]; then
+        echo
+        echo "Static Timing Analysis failed"
+        exit $rval
     fi
 fi

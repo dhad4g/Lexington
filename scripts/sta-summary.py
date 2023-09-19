@@ -28,10 +28,12 @@ parser.add_argument("--no-graph", dest="noGraph", action="store_true",
                     help="Do not show delay visualization graph")
 parser.add_argument("--sel", metavar="ID", type=int, nargs="*",
                     help="Select path by id")
+parser.add_argument("--unique", action="store_true",
+                    help="only show unique input->output combinations")
 
 args = parser.parse_args()
 if args.noGraph:
-    args.verbose2 = True
+    args.verbose = True
 if args.verbose3:
     args.verbose2 = True
 if args.verbose2:
@@ -187,13 +189,17 @@ def parseTimingReport(filename:str) -> List[Path]:
             if (state == 'startpoint'):
                 # Find startpoint
                 if (line.startswith("Startpoint")):
-                    path = Path( re.sub(r"Startpoint:\s*", "", line) )
-                    module = Module(re.search(r"^[^/]*", path.startpoint)[0])
+                    startpoint = re.sub(r"Startpoint:\s*", "", line)
+                    startpoint = re.sub(r"\([\s\S]*?\)$", "", startpoint)
+                    path = Path(startpoint)
+                    module = Module(re.search(r"^[^/\s]*", path.startpoint)[0])
                     state = 'endpoint'
             elif (state == 'endpoint'):
                 # Find endpoint
                 if (line.startswith("Endpoint")):
-                    path.addEndpoint( re.sub(r"Endpoint:\s*", "", line) )
+                    endpoint = re.sub(r"Endpoint:\s*", "", line)
+                    endpoint = re.sub(r"\([\s\S]*?\)$", "", endpoint)
+                    path.addEndpoint(endpoint)
                     state = 'first_hop'
             elif (state == 'first_hop'):
                 # Skip ahead to startpoint
@@ -245,30 +251,35 @@ def main() -> None:
             ids = range(len(paths))
         else:
             ids = range(min( len(paths), args.max ))
+    unique = []
     for i in ids:
         path = paths[i]
-        if args.verbose:
-            label = f"#{i}  {path.startpoint} -> {path.endpoint}    {path.delay:.2f} ns"
-            print(label)
-            if args.verbose2:
-                print("-"*len(label))
-                if args.verbose3:
-                    print(path.tabulateVerbose())
-                else:
-                    print(path.tabulate(visualize=(not args.noGraph)))
-            if not args.noGraph:
-                print(path.visualize())
-            print()
-        else:
-            # print minimal
-            indent = 6
-            id = (f"#{i}")
-            id = (id + (" "*indent))[:indent]
-            graph = path.visualize().splitlines()
-            graph[0] = (" "*indent) + graph[0] + "\n"
-            graph[1] = id + graph[1] + f"  {path.delay} ns\n"
-            graph[2] = (" "*indent) + graph[2] + "\n"
-            print("".join(graph))
+        start = re.sub(r"\[\d+\]", "", path.startpoint)
+        end = re.sub(r"_reg_[a-zA-z0-9_]*\d+.*", "", path.endpoint)
+        if (not unique) or (not (start,end) in unique):
+            unique.append((start,end))
+            if args.verbose:
+                label = f"#{i}  {path.startpoint} -> {path.endpoint}    {path.delay:.2f} ns"
+                print(label)
+                if args.verbose2:
+                    print("-"*len(label))
+                    if args.verbose3:
+                        print(path.tabulateVerbose())
+                    else:
+                        print(path.tabulate(visualize=(not args.noGraph)))
+                if not args.noGraph:
+                    print(path.visualize())
+                print()
+            else:
+                # print minimal
+                indent = 6
+                id = (f"#{i}")
+                id = (id + (" "*indent))[:indent]
+                graph = path.visualize().splitlines()
+                graph[0] = (" "*indent) + graph[0] + "\n"
+                graph[1] = id + graph[1] + f"  {path.delay} ns\n"
+                graph[2] = (" "*indent) + graph[2] + "\n"
+                print("".join(graph))
 
 
 if __name__ == "__main__":
