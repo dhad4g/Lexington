@@ -37,7 +37,7 @@ top=""
 interact=false
 synth=true
 sta=false
-wrap=true
+wrap=false
 clk="clk"
 clean=false
 while [[ $# -gt 0 ]]; do

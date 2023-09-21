@@ -35,12 +35,12 @@ if __name__ == "__main__":
     buff = re.sub(fr"module\s+{top}", f"module {top}_wrapper", buff)
 
     # get input port names
-    inputs = re.findall(r"input[\s\S]*?([_a-zA-Z0-9]+)\s*[,\)]", buff)
+    inputs = re.findall(r"input[\s\S]*?([_a-zA-Z0-9]+)\s*(?:,|\);)", buff)
     if not inputs:
         print("no input ports found")
         sys.exit(1)
     # get output ports
-    matches = re.findall(r"output\s*([\s\S]*?)\s*[,\)]", buff)
+    matches = re.findall(r"output\s*([\s\S]*?)\s*(?:,|\);)", buff)
     if not matches:
         print("no output ports found")
         sys.exit(1)
