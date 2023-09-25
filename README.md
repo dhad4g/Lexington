@@ -1,7 +1,6 @@
 # GPro Lexington RISC-V CPU
 
 ![Status](https://img.shields.io/badge/status-active_development-blue)
-$\hspace{12px}$
 ![Sim](https://img.shields.io/badge/simulation-passing-green)
 ![FPGA](https://img.shields.io/badge/FPGA-failing-red)
 
