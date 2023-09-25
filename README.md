@@ -1,6 +1,9 @@
 # GPro Lexington RISC-V CPU
 
-![Status](https://img.shields.io/badge/status-work_in_progress-yellow)
+![Status](https://img.shields.io/badge/status-active_development-blue)
+$\hspace{12px}$
+![Sim](https://img.shields.io/badge/simulation-passing-green)
+![FPGA](https://img.shields.io/badge/FPGA-failing-red)
 
 
 The GPro Lexington is the first generation of RISC-V processors designed by [Gerber Prototyping](https://g-proto.com).
@@ -23,8 +26,6 @@ The project is made to be easily adaptable to any Xilinx product.
 - 6 external interrupt pins (2 per GPIO bank)
 - UART interface with interrupt support
 
-Microarchitecture documentation can be found in [docs/Lexington.md](./docs/Lexington.md)
-
 ## Project Status
 
 | Component | Docs | Sim | FPGA |
@@ -35,6 +36,10 @@ Microarchitecture documentation can be found in [docs/Lexington.md](./docs/Lexin
 | GPIO  | ![](https://img.shields.io/badge/complete-g)      | ![](https://img.shields.io/badge/passing-g)       | ![](https://img.shields.io/badge/failing-red)
 | Timers| ![](https://img.shields.io/badge/partial-yellow)  | ![](https://img.shields.io/badge/untested-orange) | ![](https://img.shields.io/badge/untested-orange)
 | UART  | ![](https://img.shields.io/badge/missing-grey)    | ![](https://img.shields.io/badge/missing-grey)    | ![](https://img.shields.io/badge/missing-grey)
+
+## Design and Microarchitecture
+
+Complete design documentation can be found in [docs/Lexington.md](./docs/Lexington.md)
 
 ## Getting Started
 
