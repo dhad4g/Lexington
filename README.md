@@ -5,12 +5,16 @@
 ![FPGA](https://img.shields.io/badge/FPGA-failing-red)
 
 
-The GPro Lexington is the first generation of RISC-V processors designed by [Gerber Prototyping](https://g-proto.com).
+The GPro 1 (Lexington) is the first generation of RISC-V processors designed by
+[Gerber Prototyping](https://g-proto.com).
 Intended for educational use for simulation, FPGA implementation, and physical design.
-The current toolchain is uses AMD Xilinx Vivado:registered: and the
+The current toolchain uses AMD Xilinx Vivado:registered: and the
 [RISC-V GNU Compiler toolchain](https://github.com/riscv-collab/riscv-gnu-toolchain).
 Supported target hardware is the [Digilent:registered: Basys 3 Artix-7 FPGA](https://digilent.com/shop/basys-3-artix-7-fpga-trainer-board-recommended-for-introductory-users/).
 The project is made to be easily adaptable to any Xilinx product.
+
+The GPro 2 (Saratoga) is currently in early development. The current status can be found at
+[https://github.com/GProCPU/Saratoga](https://github.com/GProCPU/Saratoga),
 
 ## Features
 
