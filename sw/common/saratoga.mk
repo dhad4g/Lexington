@@ -9,29 +9,29 @@ RISCV_PREFIX ?= riscv32-unknown-elf-
 MARCH ?= rv32i_zicsr
 MABI  ?= ilp32
 
-LEXINGTON_HOME ?= ../../..
+SARATOGA_HOME ?= ../../..
 
 
 # --------------------------------------------------
-# Lexington software framework
+# Saratoga software framework
 # --------------------------------------------------
 # Linker script and startup file
-LEXINGTON_COM_PATH = $(LEXINGTON_HOME)/sw/common
+SARATOGA_COM_PATH = $(SARATOGA_HOME)/sw/common
 # Main library include files
-LEXINGTON_INC_PATH = $(LEXINGTON_HOME)/sw/lib/inc
+SARATOGA_INC_PATH = $(SARATOGA_HOME)/sw/lib/inc
 # Main library source files
-LEXINGTON_SRC_PATH = $(LEXINGTON_HOME)/sw/lib/src
+SARATOGA_SRC_PATH = $(SARATOGA_HOME)/sw/lib/src
 
 
 # Core libraries
-CORE_SRC  = $(wildcard $(LEXINGTON_SRC_PATH)/*.c) $(wildcard $(LEXINGTON_SRC_PATH)/*.cpp)
+CORE_SRC  = $(wildcard $(SARATOGA_SRC_PATH)/*.c) $(wildcard $(SARATOGA_SRC_PATH)/*.cpp)
 # Start-up code
-CORE_SRC += $(LEXINGTON_COM_PATH)/startup_lexington.S
+CORE_SRC += $(SARATOGA_COM_PATH)/startup_saratoga.S
 
 # Linker script
-LD_SCRIPT ?= $(LEXINGTON_COM_PATH)/lexington.ld
+LD_SCRIPT ?= $(SARATOGA_COM_PATH)/saratoga.ld
 # MakeHex script
-MAKE_HEX ?= $(LEXINGTON_HOME)/scripts/makehex.py
+MAKE_HEX ?= $(SARATOGA_HOME)/scripts/makehex.py
 
 # Main output files
 APP_ELF = main.elf
@@ -71,8 +71,8 @@ DUMP_OPTS ?= --visualize-jumps -Mnumeric,no-aliases
 
 
 # Macros
-ifdef LEXINGTON_SIM
-CC_OPTS += -DLEXINGTON_SIM
+ifdef SARATOGA_SIM
+CC_OPTS += -DSARATOGA_SIM
 endif
 
 
@@ -88,16 +88,16 @@ clean:
 # Compile
 %.s.o: %.s
 	@echo "Compiling $<"
-	@$(CC) -c $(CC_OPTS) -I $(LEXINGTON_INC_PATH) $< -o $@
+	@$(CC) -c $(CC_OPTS) -I $(SARATOGA_INC_PATH) $< -o $@
 %.S.o: %.S
 	@echo "Compiling $<"
-	@$(CC) -c $(CC_OPTS) -I $(LEXINGTON_INC_PATH) $< -o $@
+	@$(CC) -c $(CC_OPTS) -I $(SARATOGA_INC_PATH) $< -o $@
 %.c.o: %.c
 	@echo "Compiling $<"
-	@$(CC) -c $(CC_OPTS) -I $(LEXINGTON_INC_PATH) $< -o $@
+	@$(CC) -c $(CC_OPTS) -I $(SARATOGA_INC_PATH) $< -o $@
 %.cpp.o: %.cpp
 	@echo "Compiling $<"
-	@$(CC) -c $(CC_OPTS) -I $(LEXINGTON_INC_PATH) $< -o $@
+	@$(CC) -c $(CC_OPTS) -I $(SARATOGA_INC_PATH) $< -o $@
 
 # Link
 $(APP_ELF): $(OBJ)

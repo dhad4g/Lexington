@@ -1,8 +1,8 @@
 `timescale 1ns/1ps
 
 `include "rv32.sv"
-`include "lexington.sv"
-import lexington::*;
+`include "saratoga.sv"
+import saratoga::*;
 
 
 module decoder #(
@@ -18,10 +18,10 @@ module decoder #(
 
         // Register File Ports
         output logic rs1_en,                        // register source 1 enable
-        output rv32::reg_addr_t rs1_addr,           // register source 1 address
+        output rv32::gpr_addr_t rs1_addr,           // register source 1 address
         input  rv32::word rs1_data,                 // register source 1 data
         output logic rs2_en,                        // register source 2 enable
-        output rv32::reg_addr_t rs2_addr,           // register source 2 address
+        output rv32::gpr_addr_t rs2_addr,           // register source 2 address
         input  rv32::word rs2_data,                 // register source 2 data
 
         // CSR Ports
@@ -39,7 +39,7 @@ module decoder #(
         // Load/Store Ports
         output lsu_op_t lsu_op,                     // LSU operation select
         output rv32::word alt_data,                 // LSU alternate data
-        output rv32::reg_addr_t dest_addr,          // LSU destination register address
+        output rv32::gpr_addr_t dest_addr,          // LSU destination register address
 
         // Exception Flags
         output logic illegal_inst,                  // illegal instruction flag

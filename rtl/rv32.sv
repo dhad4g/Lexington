@@ -14,7 +14,7 @@ package rv32;
     typedef logic [XLEN-1:0] word;
     typedef logic signed [XLEN-1:0] signed_word;
 
-    typedef logic [REG_ADDR_WIDTH-1:0] reg_addr_t;
+    typedef logic [REG_ADDR_WIDTH-1:0] gpr_addr_t;
     typedef logic [CSR_ADDR_WIDTH-1:0] csr_addr_t;
 
 

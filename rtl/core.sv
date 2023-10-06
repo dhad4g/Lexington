@@ -12,8 +12,8 @@
 `timescale 1ns/1ps
 
 `include "rv32.sv"
-`include "lexington.sv"
-import lexington::*;
+`include "saratoga.sv"
+import saratoga::*;
 
 
 module core #(
@@ -101,9 +101,9 @@ module core #(
     logic rs1_en;
     logic rs2_en;
     logic dest_en;
-    rv32::reg_addr_t rs1_addr;
-    rv32::reg_addr_t rs2_addr;
-    rv32::reg_addr_t dest_addr;
+    rv32::gpr_addr_t rs1_addr;
+    rv32::gpr_addr_t rs2_addr;
+    rv32::gpr_addr_t dest_addr;
     rv32::word rs1_data;
     rv32::word rs2_data;
     rv32::word dest_data;

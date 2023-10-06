@@ -5,8 +5,8 @@
 `timescale 1ns/1ps
 
 `include "rv32.sv"
-`include "lexington.sv"
-import lexington::*;
+`include "saratoga.sv"
+import saratoga::*;
 
 
 module core_TB;

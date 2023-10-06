@@ -1,5 +1,5 @@
-#ifndef __LEXINGTON_H
-#define __LEXINGTON_H
+#ifndef __SARATOGA_H
+#define __SARATOGA_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,4 +41,4 @@ inline void wfi() { asm volatile inline ("wfi"); }
 }
 #endif
 
-#endif //__LEXINGTON_H
+#endif //__SARATOGA_H

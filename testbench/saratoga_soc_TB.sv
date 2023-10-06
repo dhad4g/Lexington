@@ -3,7 +3,7 @@
 `timescale 1ns/1ps
 
 
-module lexington_soc_TB;
+module saratoga_soc_TB;
 
     localparam MAX_CYCLES = 256;
     integer clk_count = 0;
@@ -22,7 +22,7 @@ module lexington_soc_TB;
 
 
     // Instantiate DUT
-    lexington_soc DUT (
+    saratoga_soc DUT (
         .clk,
         .rst,
         .io_pins
@@ -40,9 +40,9 @@ module lexington_soc_TB;
         #200;
         rst <= 0;
 
-        fid = $fopen("lexington_soc.log");
-        $dumpfile("lexington_soc.vcd");
-        $dumpvars(4, lexington_soc_TB);
+        fid = $fopen("saratoga_soc.log");
+        $dumpfile("saratoga_soc.vcd");
+        $dumpvars(4, saratoga_soc_TB);
     end
 
 

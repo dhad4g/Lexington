@@ -4,19 +4,19 @@ OUTPUT_ARCH(riscv)
 ENTRY(_start)
 
 
-__Lexington_rom_size = 4K;
-__Lexington_ram_size = 4K;
+__Saratoga_rom_size = 4K;
+__Saratoga_ram_size = 4K;
 
-__Lexington_rom_base = 0x00000000;
-__Lexington_ram_base = 0x40000000;
+__Saratoga_rom_base = 0x00000000;
+__Saratoga_ram_base = 0x40000000;
 
-__Lexington_heap_size = DEFINED(__Lexington_heap_size) ? __Lexington_heap_size : 0;
+__Saratoga_heap_size = DEFINED(__Saratoga_heap_size) ? __Saratoga_heap_size : 0;
 
 
 MEMORY
 {
-    rom (rx) : ORIGIN = __Lexington_rom_base, LENGTH = __Lexington_rom_size
-    ram (rw) : ORIGIN = __Lexington_ram_base, LENGTH = __Lexington_ram_size
+    rom (rx) : ORIGIN = __Saratoga_rom_base, LENGTH = __Saratoga_rom_size
+    ram (rw) : ORIGIN = __Saratoga_ram_base, LENGTH = __Saratoga_ram_size
 }
 
 
@@ -43,7 +43,7 @@ SECTIONS
         PROVIDE_HIDDEN(__fini_array_end = .);
 
         /* Include build ID */
-        PROVIDE(__Lexington_build_id_addr = .);
+        PROVIDE(__Saratoga_build_id_addr = .);
         KEEP(*(.note.gnu.build-id))
 
         /* finish section on word boundary */
@@ -78,7 +78,7 @@ SECTIONS
     .heap : ALIGN(4)
     {
         PROVIDE(__heap_start = .);
-        . = __Lexington_heap_size;
+        . = __Saratoga_heap_size;
         /* finish section on word boundary */
         . = ALIGN(4);
         PROVIDE(__head_end = .);
@@ -87,13 +87,13 @@ SECTIONS
 }
 
 
-/* Export symbols for startup_Lexington.S */
-PROVIDE(__Lexington_imem_begin              = ORIGIN(rom));
-PROVIDE(__Lexington_dmem_begin              = ORIGIN(ram));
-PROVIDE(__Lexington_stack_begin             = (ORIGIN(ram) + LENGTH(ram)) - 4);
-PROVIDE(__Lexington_bss_start               = __bss_start);
-PROVIDE(__Lexington_bss_end                 = __bss_end);
-PROVIDE(__Lexington_copy_data_src_begin     = LOADADDR(.data));
-PROVIDE(__Lexington_copy_data_dest_begin    = __data_start);
-PROVIDE(__Lexington_copy_data_dest_end      = __data_end);
-PROVIDE(__Lexington_heap_size               = __Lexington_heap_size);
+/* Export symbols for startup_Saratoga.S */
+PROVIDE(__Saratoga_imem_begin              = ORIGIN(rom));
+PROVIDE(__Saratoga_dmem_begin              = ORIGIN(ram));
+PROVIDE(__Saratoga_stack_begin             = (ORIGIN(ram) + LENGTH(ram)) - 4);
+PROVIDE(__Saratoga_bss_start               = __bss_start);
+PROVIDE(__Saratoga_bss_end                 = __bss_end);
+PROVIDE(__Saratoga_copy_data_src_begin     = LOADADDR(.data));
+PROVIDE(__Saratoga_copy_data_dest_begin    = __data_start);
+PROVIDE(__Saratoga_copy_data_dest_end      = __data_end);
+PROVIDE(__Saratoga_heap_size               = __Saratoga_heap_size);

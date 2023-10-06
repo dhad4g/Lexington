@@ -1,13 +1,13 @@
-# Lexington Microarchitecture
+# Saratoga Microarchitecture
 
 ## Design
 
-The GPro Lexington CPU is a single-cycle RISC-V RV32I implementation.
+The GPro 2 (Saratoga) is a 5-stage RISC-V RV32IM implementation.
 It features a read-only program memory and separate read/write data memory.
 Figure 1 shows a simplified diagram of the CPU core
 
 ![](./figures/Core_BlockDiagram.drawio.svg) \
-**Figure 1.** GPro Lexington minimal core implementation
+**Figure 1.** GPro 2 (Saratoga) minimal core implementation
 
 ## Behavior
 
@@ -32,7 +32,7 @@ Information about programming the device is found in the [Toolchain](./Toolchain
 A full diagram of the SoC (minus peripherals) is shown in Figure 2.
 
 ![](./figures/BlockDiagram.drawio.svg) \
-**Figure 2.** GPro Lexington SoC
+**Figure 2.** GPro 2 (Saratoga) SoC
 
 ### Memory Map
 

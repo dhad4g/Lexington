@@ -70,8 +70,8 @@ function sim() {
     echo
 
     # execute macro commands
-    exec_macro_cmds "$source" "LEXINGTON_SIM=1"
-    exec_macro_cmds "$testbench" "LEXINGTON_SIM=1"
+    exec_macro_cmds "$source" "SARATOGA_SIM=1"
+    exec_macro_cmds "$testbench" "SARATOGA_SIM=1"
     echo
 
     # compile

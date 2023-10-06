@@ -1,10 +1,10 @@
-`ifndef __LEXINGTON_SV
-`define __LEXINGTON_SV
+`ifndef __SARATOGA_SV
+`define __SARATOGA_SV
 
 `include "rv32.sv"
 
 
-package lexington;
+package saratoga;
 
     localparam DEFAULT_CLK_PERIOD       = 10.0;             // core clock period in ns
 
@@ -121,4 +121,4 @@ package lexington;
 
 endpackage
 
-`endif //__LEXINGTON_SV
+`endif //__SARATOGA_SV

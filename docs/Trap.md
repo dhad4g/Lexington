@@ -1,19 +1,22 @@
 # Trap Unit
 
-The Trap Unit manages exceptions and interrupts.
-Reset conditions are also handles by the trap unit.
-This implementation uses purely combinatorial logic, except for trap CSRs.
+The Trap Unit manages exceptions and interrupts. Reset conditions are also
+handled by the trap unit. This module uses purely combinatorial logic. For
+details on trap insertion into the pipeline see the [Control Unit](./Control.md).
 
-This document uses the RISC-V Specification definitions of *trap*, *exception*, and *interrupt*.
-- *trap*: the synchronous transfer of control to a trap handler caused by an *exception* or *interrupt*
-- *exception*: an unusual condition occurring at run time associated with an instruction in the current hart.
+This document uses the RISC-V Specification definitions of *trap*, *exception*,
+and *interrupt*.
+- *trap*: the synchronous transfer of control to a trap handler caused by an
+  *exception* or *interrupt*
+- *exception*: an unusual condition occurring at run time associated with an
+  instruction in the current hart.
 - *interrupt*: an external event that occurs asynchronously to the current hart.
 
 ## Ports
 
 ### Parameters
 
-- **`WIDTH=32`** data width
+- **`XLEN=32`** data width
 - **`CSR_ADDR_WIDTH=12`** CSR address width
 - **`RESET_ADDR=0x0000_0000`** program counter reset/boot address
 
@@ -62,6 +65,8 @@ This document uses the RISC-V Specification definitions of *trap*, *exception*, 
 - **`csr_rd_data[WIDTH-1:0]`** CSR read data
 - **`exception`** exception flag
 - **`trap`** trap taken flag
+
+<br>
 
 ## Behavior
 

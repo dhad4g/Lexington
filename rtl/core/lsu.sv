@@ -1,8 +1,8 @@
 `timescale 1ns/1ps
 
 `include "rv32.sv"
-`include "lexington.sv"
-import lexington::*;
+`include "saratoga.sv"
+import saratoga::*;
 
 
 module lsu #(
@@ -18,7 +18,7 @@ module lsu #(
 
         // Register File write port
         output logic dest_en,                                   // register file write enable
-        input  rv32::reg_addr_t dest_addr,                      // destination register
+        input  rv32::gpr_addr_t dest_addr,                      // destination register
         output rv32::word dest_data,                            // register file write data
 
         // DBus interface

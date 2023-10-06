@@ -1,3 +1,3 @@
-LEXINGTON_HOME = ../../..
+SARATOGA_HOME = ../../..
 
-include $(LEXINGTON_HOME)/sw/common/lexington.mk
+include $(SARATOGA_HOME)/sw/common/saratoga.mk

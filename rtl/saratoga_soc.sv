@@ -8,12 +8,12 @@
 `timescale 1ns/1ps
 
 `include "rv32.sv"
-`include "lexington.sv"
+`include "saratoga.sv"
 `include "axi4_lite.sv"
-import lexington::*;
+import saratoga::*;
 
 
-module lexington_soc #(
+module saratoga_soc #(
         parameter CLK_PERIOD    = DEFAULT_CLK_PERIOD    // system clock period in ns
     ) (
         input  logic clk,                       // system clock

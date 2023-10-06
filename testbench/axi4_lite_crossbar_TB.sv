@@ -2,9 +2,9 @@
 `timescale 1ns/1ps
 
 `include "rv32.sv"
-`include "lexington.sv"
+`include "saratoga.sv"
 `include "axi4_lite.sv"
-import lexington::*;
+import saratoga::*;
 
 
 module axi4_lite_crossbar_TB;
