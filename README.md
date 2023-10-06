@@ -7,20 +7,16 @@
 
 The GPro 2 (Saratoga) is the second generation of RISC-V processors designed by
 [Gerber Prototyping](https://g-proto.com). Intended both FPGA implementation and
-physical design. Saratoga adds a 5-stage pipeline to the previous generation
-GPro 1 (Lexington). This processor is currently in the initial design phase as
+physical design. Originally intended to include a 5-stage pipeline has been
+changed to a 3-stage pipeline. This processor is currently in the initial design phase as
 the focus of a Graduate Independent Study course.
 
 ## Features
 
-- RV32IM instruction set
+- RV32I instruction set
 - Modified-Harvard architecture
-- 4k instruction and data caches
 - Machine-mode and User-mode
-- 5-stage pipeline
-  - data forwarding
-  - speculative execution
-  - Low-overhead exception handling
+- 3-stage pipeline
 
 ## Pipeline
 
