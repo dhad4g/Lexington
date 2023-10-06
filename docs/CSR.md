@@ -16,6 +16,12 @@ For CSR instruction behavior, see the [Decoder CSR Instruction](./CSR.md#control
 The CSR unit uses synchronous/clocked logic.
 However, trap CSR operations are delegated to the trap unit using combinatorial logic.
 
+To aid in pipeline optimization, CSRs are grouped into four categories
+- Atomic
+- Scratch
+- Trap/Scratch
+- Read-Only
+
 ## Ports
 
 ### Parameters
@@ -171,10 +177,11 @@ When a trap is taken:
 - `MIE` is set to 0
 - ~~`MPP` is set to 3 (i.e. machine-mode)~~ *Unused*
 
-When an `MRET` instruction is executed:
+When an `xRET` instruction is executed:
 - `MIE` is set to `MPIE`
 - `MPIE` is set to 1
 - ~~`MPP` is set to 3 (i.e. machine-mode)~~ *Unused*
+- `MPRV` is set to 0
 
 
 ### Machine Trap-Vector Base-Address Register `mtvec`
