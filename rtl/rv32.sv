@@ -8,8 +8,11 @@ package rv32;
     localparam CSR_ADDR_WIDTH       = 12;       // CSR address width
 
     localparam BYTES_IN_WORD        = XLEN / 8;                     // number of bytes in XLEN word
-    localparam ADDR_BITS_IN_WORD    = $clog2(BYTES_IN_WORD);           // number of address bits used by XLEN word
+    localparam ADDR_BITS_IN_WORD    = $clog2(BYTES_IN_WORD);        // number of address bits used by XLEN word
     localparam REG_COUNT            = 2 ** rv32::REG_ADDR_WIDTH;
+
+    localparam MTVEC_MODE_DIRECT    = 2'b00;
+    localparam MTVEC_MODE_VECTORED  = 2'b01;
 
     typedef logic [XLEN-1:0] word;
     typedef logic signed [XLEN-1:0] signed_word;
@@ -49,12 +52,10 @@ package rv32;
 
 
     // RISC-V privilege is encoded as a 2-bit value
-    // This implemetation uses a third bit to encode debug-mode
-    typedef enum logic [2:0] {
-        umode   = 3'b000,    // user-mode
-        smode   = 3'b001,    // supervisor-mode
-        mmode   = 3'b011,    // machine-mode
-        dmode   = 3'b111     // debug-mode
+    typedef enum logic [1:0] {
+        UMODE   = 3'b00,    // user-mode
+        SMODE   = 3'b01,    // supervisor-mode
+        MMODE   = 3'b11     // machine-mode
     } priv_mode_t;
 
 
@@ -69,7 +70,7 @@ package rv32;
     localparam TRAP_CODE_INST_MISALIGNED        = 0;        // instruction address misaligned exception
     localparam TRAP_CODE_INST_ACCESS_FAULT      = 1;        // instruction access fault exception
     localparam TRAP_CODE_ILLEGAL_INST           = 2;        // illegal instruction exception
-    localparam TRAP_CODE_BREAKPOINT             = 3;        // breakpoing exception
+    localparam TRAP_CODE_BREAKPOINT             = 3;        // breakpoint exception
     localparam TRAP_CODE_LOAD_MISALIGNED        = 4;        // load address misaligned exception
     localparam TRAP_CODE_LOAD_ACCESS_FAULT      = 5;        // load access fault exception
     localparam TRAP_CODE_STORE_MISALIGNED       = 6;        // store address misaligned exception

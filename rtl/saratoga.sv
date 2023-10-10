@@ -25,6 +25,12 @@ package saratoga;
     localparam GPIOC_BASE_ADDR          = 32'hFFFF_FFC0;    // GPIOC
 
     localparam DEFAULT_AXI_TIMEOUT      = 17;               // bus timeout in number of cycles
+    localparam MTVEC_ADDR_BIT_ALIGN     = 7;                // alignment constraint for trap-vector addressing
+
+    // Pipeline stage indexes
+    localparam FETCH_STAGE_ID           = 0;
+    localparam DECODE_STAGE_ID          = 1;
+    localparam EXEC_STAGE_ID            = 2;
 
 
     localparam ALU_OP_WIDTH     = 4;                // ALU operation select width

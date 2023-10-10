@@ -7,20 +7,16 @@ module if_id (
         input  logic rst_n,
 
         input  logic stall,
-        //input  logic squash,          // squash not needed because this is the first/second stage
+        input  logic squash,
 
         input  logic bubble_i,
         input  rv32::word pc_i,
-        input  rv32::priv_mode_t priv_i,
-        input  rv32::priv_mode_t mem_priv_i,
-        input  logic endianness_i,
+        input  rv32::word pc4_i,
         input  rv32::word inst_i,
 
         output logic bubble_o,
         output rv32::word pc_o,
-        output rv32::priv_mode_t priv_o,
-        output rv32::priv_mode_t mem_priv_o,
-        output logic endianness_o,
+        output rv32::word pc4_o,
         output rv32::word inst_o
     );
 
@@ -28,18 +24,19 @@ module if_id (
         if (!rst_n) begin
             bubble_o        <= 1;
             pc_o            <= 0;
-            priv_o          <= 0;
-            mem_priv_o      <= 0;
-            endianness_o    <= 0;
+            pc4_o           <= 0;
             inst_o          <= 0;
         end
-        else if (!stall) begin
-            bubble_o        <= bubble_i;
-            pc_o            <= pc_i;
-            priv_o          <= priv_i;
-            mem_priv_o      <= mem_priv_i;
-            endianness_o    <= endianness_i;
-            inst_o          <= inst_i;
+        else begin
+            if (squash) begin
+                bubble_o        <= 1;
+            end
+            else if (!stall) begin
+                bubble_o        <= bubble_i;
+                pc_o            <= pc_i;
+                pc4_o           <= pc4_i;
+                inst_o          <= inst_i;
+            end
         end
     end
 

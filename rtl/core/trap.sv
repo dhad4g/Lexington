@@ -5,345 +5,220 @@
 import saratoga::*;
 
 
-module trap #(
-        parameter RESET_ADDR        = DEFAULT_RESET_ADDR        // program counter reset/boot address
-    ) (
-        input  logic clk,
-        input  logic rst_n,
+module trap (
+        input  logic clk,                                   // core clock
+        input  logic rst_n,                                 // active-low reset
 
-        // PC related signals
-        input  rv32::word pc,
-        input  rv32::word decoder_next_pc,
-        output rv32::word next_pc,
+        // PC inputs
+        input  rv32::word fetch_pc,                         // PC of Fetch Stage
+        input  rv32::word decode_pc,                        // PC of Decode Stage
+        input  rv32::word exec_pc,                          // PC of Execute Stage
 
-        // CSR signals
-        input  logic csr_rd_en,
-        input  logic csr_wr_en,
-        input  rv32::csr_addr_t csr_addr,
-        output rv32::word csr_rd_data,
-        input  rv32::word csr_wr_data,
+        // Trap related inputs
+        input  logic trap_insert,                           // asserted by Control Unit when a trap is inserted into the pipeline
+        input  rv32::word interrupts,                       // interrupts pending with all appropriate enable masks applied
+        input  rv32::word mtvec,                            // value of mtvec CSR
+        input  logic load_store_n,                          // indicates source of load/store exception (Execute Stage; 0=store,1=load)
+        input  rv32::word inst,                             // instruction bits (Decode Stage)
+        input  rv32::word jump_pc,                          // misaligned instruction address (Decode Stage)
+        input  rv32::word data_addr,                        // data load/store address (Execute Stage)
 
-        // Exception metadata
-        input  logic global_mie,
-        input  logic load_store_n,
-        input  rv32::word data_addr,
-        input  rv32::word inst,
+        // Trap related outputs
+        output logic trap_req,                              // request to the Control Unit to insert trap into the pipeline
+        output rv32::word trap_pc,                          // destination of a trap
+        output rv32::word trap_epc,                         // address of faulting or interrupted instruction
+        output rv32::word trap_cause,                       // trap cause (see mcause CSR)
+        output rv32::word trap_val,                         // trap value (see mtval CSR)
 
-        // Exceptions
-        input  logic inst_access_fault,
-        input  logic inst_misaligned,
-        input  logic illegal_inst,
-        input  logic illegal_csr,
-        input  logic data_misaligned,
-        input  logic data_access_fault,
-        input  logic ecall,
-        input  logic ebreak,
+        // Squash instructions
+        output logic squash_decode,                         // squash instruction in Decode Stage
+        output logic squash_exec,                           // squash instruction in Execute Stage
 
-        // Interrupts
-        input  logic mtime_int,
-        input  logic uart0_rx_int,
-        input  logic uart0_tx_int,
-        input  logic timer0_int,
-        input  logic timer1_int,
-        input  logic gpioa_int_0,
-        input  logic gpioa_int_1,
-        input  logic gpiob_int_0,
-        input  logic gpiob_int_1,
-        input  logic gpioc_int_0,
-        input  logic gpioc_int_1,
-
-        // Trap return
-        input  logic mret,
-
-        // Instruction incomplete flag(s)
-        input  logic dbus_wait,
-
-        // Global Exception and Trap Flags
-        output logic exception,
-        output logic trap
+        // Exception flags
+        input  logic mret,                                  // MRET instruction
+        input  logic inst_access_fault,                     // instruction access fault (Fetch Stage)
+        input  logic inst_misaligned,                       // instruction misaligned (Decode Stage)
+        input  logic illegal_inst,                          // illegal instruction (Decode Stage)
+        input  logic illegal_csr,                           // illegal CSR instruction (Decode Stage)
+        input  logic ecall,                                 // environment call (Decode Stage)
+        input  logic ebreak,                                // breakpoint (Decode Stage)
+        input  logic data_misaligned,                       // load/store address misaligned (Execute Stage)
+        input  logic data_access_fault                      // load/store access fault (Execute Stage)
     );
 
-    // CSRs
-    rv32::word mtvec;
-    interrupt_csr_t mip;
-    interrupt_csr_t mie;
-    rv32::word mepc;
-    rv32::word mcause;
-    rv32::word mtval;
+    // Internal signals
+    rv32::word _pc [0:2];
+    logic _trap_req;                        // trap request shadow register
+    logic _exception, _interrupt, _trap;    // combined exception/interrupt flags
+    integer _except_stage;
+    rv32::word _except_cause, _int_cause;
+    rv32::word _val;
 
-    // CSR fields
-    logic [1:0] mtvec_mode;
-    assign mtvec_mode = mtvec[1:0];
-    rv32::word mtvec_base_direct;
-    assign mtvec_base_direct = {mtvec[31:2], 2'b0};
-    rv32::word mtvec_base_vectored;
-    assign mtvec_base_vectored = {mtvec[31:7], 7'b0};
+    assign trap_req = _trap_req | _trap;
 
-    // MIP standard interrupt causes read-only
-    // assign mip.reserved15_12 = 0;
-    // assign mip.MEI = 0;
-    // assign mip.reserved10 = 0;
-    // assign mip.SEI = 0;
-    // assign mip.reserved8 = 0;
-    // assign mip.MTI = mtime_int;
-    // assign mip.reserved6 = 0;
-    // assign mip.STI = 0;
-    // assign mip.reserved4 = 0;
-    // assign mip.MSI = 0;
-    // assign mip.reserved2 = 0;
-    // assign mip.SSI = 0;
-    // assign mip.reserved0 = 0;
-    // mepc read-only
-    assign mepc[1:0] = 0;
+    // Put PC from each stage into an array
+    assign _pc = {fetch_pc, decode_pc, exec_pc};
 
-    // Private signals
-    logic _reset;           // reset register; high the first cycle after reset, else low
-    rv32::word _mcause;     // combinatorial mcause; valid only when trap is asserted
-
-
-    ////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////
-    // BEGIN: Combinatorial Logic
-    ////////////////////////////////////////////////////////////
+    // Generate internal signals
     always_comb begin
-        if (!rst_n) begin
-            csr_rd_data = 0;
-            next_pc     = RESET_ADDR;
-            exception   = 0;
-            trap        = 0;
-            _mcause     = -1;
+        if (mret) begin
+            _exception = 1;
+            _except_stage = 0;
+            _except_cause = 0;
+            _val = 0;
+        end
+        else if (inst_access_fault) begin
+            _exception = 1;
+            _except_stage = 0;
+            _except_cause = rv32::TRAP_CODE_INST_ACCESS_FAULT;
+            _val = fetch_pc;
+        end
+        else if (inst_misaligned) begin
+            _exception = 1;
+            _except_stage = 1;
+            _except_cause = rv32::TRAP_CODE_INST_MISALIGNED;
+            _val = jump_pc;
+        end
+        else if (illegal_inst) begin
+            _exception = 1;
+            _except_stage = 1;
+            _except_cause = rv32::TRAP_CODE_ILLEGAL_INST;
+            _val = inst;
+        end
+        else if (illegal_csr) begin
+            _exception = 1;
+            _except_stage = 1;
+            _except_cause = rv32::TRAP_CODE_ILLEGAL_INST;
+            _val = inst;
+        end
+        else if (ecall) begin
+            _exception = 1;
+            _except_stage = 1;
+            _except_cause = rv32::TRAP_CODE_ENV_CALL_MMODE;
+            _val = 0;
+        end
+        else if (ebreak) begin
+            _exception = 1;
+            _except_stage = 1;
+            _except_cause = rv32::TRAP_CODE_BREAKPOINT;
+            _val = 0;
+        end
+        else if (data_misaligned) begin
+            _exception = 1;
+            _except_stage = 2;
+            _except_cause = (load_store_n) ? rv32::TRAP_CODE_LOAD_MISALIGNED
+                                    : rv32::TRAP_CODE_STORE_MISALIGNED;
+            _val = data_addr;
+        end
+        if (data_access_fault) begin
+            _exception = 1;
+            _except_stage = 2;
+            _except_cause = (load_store_n) ? rv32::TRAP_CODE_LOAD_ACCESS_FAULT
+                                    : rv32::TRAP_CODE_STORE_ACCESS_FAULT;
+            _val = data_addr;
         end
         else begin
-            _mcause     = -1;
+            _exception = 0;
+            _except_stage = 0;
+            _except_cause = 0;
+        end
+        _interrupt = |interrupts;
+        _trap = _exception | _interrupt;
+    end
 
-            // Set exception, trap, & _mcause
-            if (inst_access_fault) begin
-                exception   = 1;
-                trap        = 1;
-                _mcause     = rv32::TRAP_CODE_INST_ACCESS_FAULT;
-            end
-            else if (inst_misaligned) begin
-                exception   = 1;
-                trap        = 1;
-                _mcause     = rv32::TRAP_CODE_INST_MISALIGNED;
-            end
-            else if (illegal_inst || illegal_csr) begin
-                exception   = 1;
-                trap        = 1;
-                _mcause     = rv32::TRAP_CODE_ILLEGAL_INST;
-            end
-            else if (ecall) begin
-                exception   = 1;
-                trap        = 1;
-                _mcause     = rv32::TRAP_CODE_ENV_CALL_MMODE;
-            end
-            else if (ebreak) begin
-                exception   = 1;
-                trap        = 1;
-                _mcause     = rv32::TRAP_CODE_BREAKPOINT;
-            end
-            else if (data_misaligned) begin
-                exception   = 1;
-                trap        = 1;
-                _mcause     = (load_store_n) ? rv32::TRAP_CODE_LOAD_MISALIGNED
-                                             : rv32::TRAP_CODE_STORE_MISALIGNED;
-            end
-            else if (data_access_fault) begin
-                exception   = 1;
-                trap        = 1;
-                _mcause     = (load_store_n) ? rv32::TRAP_CODE_LOAD_ACCESS_FAULT
-                                             : rv32::TRAP_CODE_STORE_ACCESS_FAULT;
-            end
-            else begin // interrupts
-                exception   = 0;
-                trap        = 0;    // overwritten if interrupt trap occurs
-                _mcause     = 0;    // overwritten if interrupt trap occurs
-                if (global_mie) begin
-                    for (integer i=0; i<rv32::XLEN; i=i+1) begin
-                        if (mip[i] && mie[i]) begin
-                            trap    = 1;
-                            _mcause = i;
-                            break; // exit loop
-                        end
-                    end
-                end
-            end // interrupts
-
-
-            // Set next_pc
-            if (_reset) begin
-                next_pc = RESET_ADDR;
-            end
-            else if (dbus_wait) begin
-                next_pc = pc;
-            end
-            else begin
-                if (trap) begin
-                    if (mtvec_mode == 2'b01) begin
-                        // vectored mode
-                        if (exception || _mcause >= 32) begin
-                            next_pc = mtvec_base_vectored;
-                        end
-                        else begin
-                            next_pc = mtvec_base_vectored + (_mcause << 2);
-                        end
-                    end
-                    else begin
-                        // direct mode
-                        next_pc = mtvec_base_direct;
-                    end
-                end // if (trap)
-                else if (mret) begin
-                    next_pc = mepc;
-                end
-                else begin
-                    next_pc = decoder_next_pc;
+    // Interrupt cause decode function
+    always_comb begin
+        rv32::word msb_mask;
+        msb_mask = ~0;
+        msb_mask = ~( msb_mask >> rv32::XLEN-1 );
+        if (!rst_n) begin
+            _int_cause = 0;
+        end
+        else begin
+            _int_cause = 0;
+            for (int i=rv32::XLEN-1; i>=0; i--) begin
+                if (interrupts[i]) begin
+                    _int_cause = i;
                 end
             end
-
-            // CSR read (set csr_rd_data)
-            // All CSR privilege checks are performed by the CSR module
-            if (csr_rd_en) begin
-                case (csr_addr)
-                    rv32::csr_addr_mtvec: begin
-                        csr_rd_data = mtvec;
-                    end
-                    rv32::csr_addr_mip: begin
-                        csr_rd_data = mip;
-                    end
-                    rv32::csr_addr_mie: begin
-                        csr_rd_data = mie;
-                    end
-                    rv32::csr_addr_mepc: begin
-                        csr_rd_data = mepc;
-                    end
-                    rv32::csr_addr_mcause: begin
-                        csr_rd_data = mcause;
-                    end
-                    rv32::csr_addr_mtval: begin
-                        csr_rd_data = mtval;
-                    end
-                    default: begin
-                        csr_rd_data = 0;
-                    end
-                endcase
-            end // if (csr_rd_en)
-            else begin
-                csr_rd_data = 0;
-            end
-
+            _int_cause = _int_cause | msb_mask;
         end
     end
-    ////////////////////////////////////////////////////////////
-    // END: Combinatorial Logic
-    ////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////
 
 
-    ////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////
-    // BEGIN: Clocked Logic
-    ////////////////////////////////////////////////////////////
+    // Shadow register control
     always_ff @(posedge clk) begin
         if (!rst_n) begin
-            _reset      <= 1;
-            mtvec       <= 0;
-            mip[31:16]  <= 0;
-            mie         <= 0;
-            mepc[31:2]  <= 0;
-            mcause      <= 0;
-            mtval       <= 0;
+            _trap_req = 0;
         end
         else begin
-            _reset <= 0;
-
-            // CSR write
-            if (csr_wr_en) begin
-                case (csr_addr)
-                    rv32::csr_addr_mtvec: begin
-                        mtvec <= csr_wr_data;
-                    end
-                    rv32::csr_addr_mip: begin
-                        mip[31:16] <= csr_wr_data[31:16];
-                    end
-                    rv32::csr_addr_mie: begin
-                        mie <= csr_wr_data;
-                    end
-                    rv32::csr_addr_mepc: begin
-                        mepc[31:2] <= csr_wr_data[31:2];
-                    end
-                    rv32::csr_addr_mcause: begin
-                        mcause <= csr_wr_data;
-                    end
-                    rv32::csr_addr_mtval: begin
-                        mtval <= csr_wr_data;
-                    end
-                endcase
-            end // if (csr_wr_en)
-
-
-            // mepc, mcause, and mtval logic; overwrite CSR write instructions
-            if (trap) begin
-                mepc[31:2]  <= (exception) ? pc[31:2] : decoder_next_pc[31:2];
-                mcause      <= {~exception, _mcause[30:0]};
-                if (inst_access_fault) begin
-                    mtval <= pc;
-                end
-                else if (inst_misaligned) begin
-                    mtval <= decoder_next_pc;
-                end
-                else if (illegal_inst || illegal_csr) begin
-                    mtval <= inst;
-                end
-                else if (ebreak) begin
-                    mtval <= pc;
-                end
-                else if (data_misaligned || data_access_fault) begin
-                    mtval <= data_addr;
-                end
-                else begin
-                    mtval <= 0;
-                end
+            if (!_trap_req) begin
+                _trap_req <= _trap;
             end
-
-
-            // Interrupt pending detect; overwrites CSR write instructions
-            if (uart0_rx_int) begin
-                mip[TRAP_CODE_UART0RX] <= 1;
+            else if (trap_insert) begin
+                _trap_req <= 0;
             end
-            if (uart0_tx_int) begin
-                mip[TRAP_CODE_UART0TX] <= 1;
-            end
-            if (timer0_int) begin
-                mip[TRAP_CODE_TIM0] <= 1;
-            end
-            if (timer1_int) begin
-                mip[TRAP_CODE_TIM1] <= 1;
-            end
-            if (gpioa_int_0) begin
-                mip[TRAP_CODE_GPIOA0] <= 1;
-            end
-            if (gpioa_int_1) begin
-                mip[TRAP_CODE_GPIOA1] <= 1;
-            end
-            if (gpiob_int_0) begin
-                mip[TRAP_CODE_GPIOB0] <= 1;
-            end
-            if (gpiob_int_1) begin
-                mip[TRAP_CODE_GPIOB1] <= 1;
-            end
-            if (gpioc_int_0) begin
-                mip[TRAP_CODE_GPIOC0] <= 1;
-            end
-            if (gpioc_int_1) begin
-                mip[TRAP_CODE_GPIOC1] <= 1;
-            end
-
         end
     end
-    ////////////////////////////////////////////////////////////
-    // END: Clocked Logic
-    ////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////
+
+    // Latch trap output data
+    always_latch begin
+        if (!rst_n) begin
+            trap_epc    <= 0;
+            trap_cause  <= 0;
+            trap_val    <= 0;
+        end
+        else begin
+            if (_exception) begin
+                trap_epc    <= _pc[_except_stage];
+                trap_cause  <= _except_cause;
+                trap_val    <= _val;
+            end
+            else if (_interrupt & !_trap_req) begin
+                trap_epc    <= fetch_pc;
+                trap_cause  <= _int_cause;
+                trap_val    <= 0;
+            end
+        end
+    end
+
+    // Combinatorial output data
+    always_comb begin
+        if (!rst_n) begin
+            trap_pc         = 0;
+            squash_decode   = 0;
+            squash_exec     = 0;
+        end
+        else begin
+            // Squashes
+            if (_exception) begin
+                squash_decode   = (_except_stage >= DECODE_STAGE_ID);
+                squash_exec     = (_except_stage >= EXEC_STAGE_ID);
+            end
+            else begin
+                squash_decode   = 0;
+                squash_exec     = 0;
+            end
+            // Trap destination PC
+            if (trap_cause[rv32::XLEN-1]) begin
+                // interrupt
+                if (mtvec[1:0] == 2'b01) begin
+                    // vectored
+                    localparam _msb = rv32::XLEN-1;
+                    localparam _lsb = MTVEC_ADDR_BIT_ALIGN;
+                    trap_pc[_msb:_lsb] = mtvec[_msb:_lsb];
+                    trap_pc[_lsb-1:0]  = 0;
+                end
+                else begin
+                    // direct
+                    trap_pc = {mtvec[rv32::XLEN-1:2], 2'b00};
+                end
+            end
+            else begin
+                // exception
+                trap_pc = {mtvec[rv32::XLEN-1:2], 2'b00};
+            end
+        end
+    end
 
 endmodule

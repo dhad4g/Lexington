@@ -15,7 +15,7 @@ the focus of a Graduate Independent Study course.
 
 - RV32I instruction set
 - Modified-Harvard architecture
-- Machine-mode and User-mode
+- Machine-mode and User-mode privilege levels
 - 3-stage pipeline
 
 ## Pipeline
