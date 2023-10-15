@@ -8,7 +8,7 @@ import saratoga::*;
 module rom #(
         parameter ADDR_WIDTH    = DEFAULT_ROM_ADDR_WIDTH    // word-addressable address bits
     ) (
-        // clock not needed; module is asynchronous
+        input  logic clk,
         // reset not needed; module is read-only
 
         input  logic rd_en1,                                // read enable 1
@@ -27,8 +27,13 @@ module rom #(
         $readmemh("rom.hex", data, 0, DEPTH-1);
     end
 
-
-    assign rd_data1 = (rd_en1) ? data[addr1] : 0;
-    assign rd_data2 = (rd_en2) ? data[addr2] : 0;
+    always_ff @(posedge clk) begin
+        if (rd_en1) begin
+            rd_data1 <= data[addr1];
+        end
+        if (rd_en2) begin
+            rd_data2 <= data[addr2];
+        end
+    end
 
 endmodule

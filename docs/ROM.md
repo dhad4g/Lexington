@@ -1,7 +1,7 @@
 # Read-Only Memory (ROM)
 
 The ROM servers as the CPU's program instruction memory.
-It features dual asynchronous read ports.
+It features dual synchronous read ports.
 
 ## Ports
 

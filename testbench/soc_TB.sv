@@ -3,7 +3,7 @@
 `timescale 1ns/1ps
 
 
-module saratoga_soc_TB;
+module soc_TB;
 
     localparam MAX_CYCLES = 256;
     integer clk_count = 0;
@@ -35,14 +35,14 @@ module saratoga_soc_TB;
 
     // Initialize
     initial begin
+        fid = $fopen("soc.log");
+        $dumpfile("soc.vcd");
+        $dumpvars(4, soc_TB);
+
         // Reset
         rst <= 1;
         #200;
         rst <= 0;
-
-        fid = $fopen("saratoga_soc.log");
-        $dumpfile("saratoga_soc.vcd");
-        $dumpvars(4, saratoga_soc_TB);
     end
 
 

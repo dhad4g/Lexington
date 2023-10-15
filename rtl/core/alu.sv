@@ -5,9 +5,7 @@
 import saratoga::*;
 
 
-module alu #(
-        
-    ) (
+module alu (
         // clock not needed; module is purely combinatorial
         // reset not needed; module is combinatorial and stateless
 
@@ -15,8 +13,7 @@ module alu #(
         input rv32::signed_word src1,           // left-side operand
         input rv32::signed_word src2,           // right-side operand
 
-        output rv32::signed_word result,        // arithmetic or logic result
-        output logic zero                       // result zero flag
+        output rv32::signed_word result         // arithmetic or logic result
     );
 
     rv32::word unsigned_src1;
@@ -25,8 +22,6 @@ module alu #(
     assign unsigned_src1 = src1;
     assign unsigned_src2 = src2;
     assign shamt = src2[4:0];
-
-    assign zero = (result==0) ? 1 : 0;
 
 
     always_comb begin

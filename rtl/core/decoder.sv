@@ -5,16 +5,14 @@
 import saratoga::*;
 
 
-module decoder #(
-        parameter USE_CSR       = 1,                // CSR instructions can be disables
-        parameter USE_TRAP      = 1                 // enable generation of the Trap Unit (requires CSR)
-    ) (
+module decoder (
         // clock not needed; module is purely combinatorial
         // reset not needed; module is stateless
 
         input  rv32::word inst,                     // instruction bits from fetch
         input  rv32::word pc,                       // current program counter
-        output rv32::word next_pc,                  // next PC calculation
+        output logic branch,                        // jump/branch taken
+        output rv32::word branch_addr,              // next PC calculation
 
         // Register File Ports
         output logic rs1_en,                        // register source 1 enable
@@ -29,12 +27,14 @@ module decoder #(
         output logic csr_explicit_rd,               // CSR explicit read flag
         output rv32::csr_addr_t csr_addr,           // CSR read address
         input  rv32::word csr_rd_data,              // CSR read data
+        input logic csr_addr_is_atomic,             // indicates CSR is atomic
+        input logic csr_addr_is_illegal,            // indicates CSR does not exists or incorrect permission
+        output logic atomic_csr,                    // indicates atomic CSR write
 
         // ALU Ports
         output alu_op_t alu_op,                     // ALU operation select
         output rv32::word src1,                     // ALU left-side operand
         output rv32::word src2,                     // ALU right-side operand
-        input  logic alu_zero,                      // ALU zero flag
 
         // Load/Store Ports
         output lsu_op_t lsu_op,                     // LSU operation select
@@ -123,7 +123,13 @@ module decoder #(
     assign funct12      = inst[31:20];
     assign csr_addr     = inst[31:20];  // output port
 
-    assign inst_misaligned = |(next_pc[1:0]);
+    assign inst_misaligned = (|branch_addr[1:0]);
+
+    // Internal signed variants
+    rv32::signed_word _src1;
+    rv32::signed_word _src2;
+    assign _src1 = src1;
+    assign _src2 = src2;
 
     // Decode immediate value
     logic [31:0] immediate;
@@ -143,6 +149,7 @@ module decoder #(
 
     always_comb begin
         // defaults for exception flags, overwrite per instruction
+        atomic_csr = 0;
         illegal_inst = 0;
         ecall = 0;
         ebreak = 0;
@@ -154,8 +161,8 @@ module decoder #(
             // BEGIN: OP Instructions
             ////////////////////////////////////////////////////////////
             OP: begin
-                // Calculate PC
-                next_pc = pc + 4;
+                branch = 0;
+                branch_addr = 0;
                 // Source read enable
                 rs1_en = 1;
                 rs2_en = 1;
@@ -213,7 +220,8 @@ module decoder #(
             // BEGIN: OP-IMM Instructions
             ////////////////////////////////////////////////////////////
             OP_IMM: begin
-                next_pc         = pc + 4;
+                branch          = 0;
+                branch_addr     = 0;
                 rs1_en          = 1;
                 rs2_en          = 0;
                 csr_rd_en       = 0;
@@ -251,7 +259,8 @@ module decoder #(
             // BEGIN: LUI/AUIPC Instructions
             ////////////////////////////////////////////////////////////
             LUI, AUIPC: begin
-                next_pc         = pc + 4;
+                branch          = 0;
+                branch_addr     = 0;
                 rs1_en          = 0;
                 rs2_en          = 0;
                 csr_rd_en       = 0;
@@ -272,6 +281,7 @@ module decoder #(
             // BEGIN: JAL/JALR Instruction
             ////////////////////////////////////////////////////////////
             JAL, JALR: begin
+                branch          = 1;
                 rs1_en          = (opcode == JALR) ? 1 : 0;
                 rs2_en          = 0;
                 csr_rd_en       = 0;
@@ -283,12 +293,12 @@ module decoder #(
                 lsu_op          = LSU_REG;
                 // calculate jump address
                 if (opcode == JAL) begin
-                    next_pc     = pc + immediate;
+                    branch_addr = pc + immediate;
                 end
                 else begin // JALR
                     // sign-extended immediate, lowest bit zeroed after calculation
-                    next_pc[31:1] = (rs1_data + immediate) >> 1;
-                    next_pc[0]    = 0;
+                    branch_addr[31:1] = (rs1_data + immediate) >> 1;
+                    branch_addr[0]    = 0;
                 end
                 if (inst_misaligned) begin
                     lsu_op = LSU_NOP;
@@ -311,25 +321,21 @@ module decoder #(
                 src1            = rs1_data;
                 src2            = rs2_data;
                 alt_data        = 0;
+                alu_op          = ALU_NOP;
                 lsu_op          = LSU_NOP;
-                // Next PC
+                // Branch address calculation
                 // sign-extended immediate, lowest bit zero
-                if (funct3 == FUNCT3_BEQ) begin
-                    next_pc     = (alu_zero)  ? (pc + immediate) : (pc + 4);
-                end
-                else begin
-                    next_pc     = (!alu_zero) ? (pc + immediate) : (pc + 4);
-                end
-                // ALU OP
+                branch_addr     = pc + immediate;
+                // Branch condition
                 case (funct3)
-                    FUNCT3_BEQ:     alu_op = ALU_XOR;  // branch if equal
-                    FUNCT3_BNE:     alu_op = ALU_XOR;  // branch if not equal
-                    FUNCT3_BLT:     alu_op = ALU_SLT;  // branch if less than
-                    FUNCT3_BGE:     alu_op = ALU_SGE;  // branch if greater than or equal
-                    FUNCT3_BLTU:    alu_op = ALU_SLTU; // branch if less than unsigned
-                    FUNCT3_BGEU:    alu_op = ALU_SGEU; // branch if greater than or equal unsigned
+                    FUNCT3_BEQ:     branch = (_src1 == _src2);  // branch if equal
+                    FUNCT3_BNE:     branch = (_src1 != _src2);  // branch if not equal
+                    FUNCT3_BLT:     branch = (_src1 <  _src2);  // branch if less than
+                    FUNCT3_BGE:     branch = (_src1 >= _src2);  // branch if greater than or equal
+                    FUNCT3_BLTU:    branch = (src1 <  src2);  // branch if less than unsigned
+                    FUNCT3_BGEU:    branch = (src1 >= src2);  // branch if greater than or equal unsigned
                     default: begin
-                        alu_op  = ALU_NOP;
+                        branch  = 0;
                         illegal_inst = 1;
                     end
                 endcase
@@ -344,7 +350,8 @@ module decoder #(
             // BEGIN: LOAD/STORE Instructions
             ////////////////////////////////////////////////////////////
             LOAD, STORE: begin
-                next_pc         = pc + 4;
+                branch          = 0;
+                branch_addr     = 0;
                 rs1_en          = 1;
                 rs2_en          = (opcode == STORE) ? 1 : 0;
                 csr_rd_en       = 0;
@@ -388,7 +395,8 @@ module decoder #(
             // BEGIN: MISC-MEM Instructions
             ////////////////////////////////////////////////////////////
             MISC_MEM: begin
-                next_pc         = pc + 4;
+                branch          = 0;
+                branch_addr     = 0;
                 rs1_en          = 0;
                 rs2_en          = 0;
                 csr_rd_en       = 0;
@@ -424,7 +432,8 @@ module decoder #(
             // BEGIN: System Instructions
             ////////////////////////////////////////////////////////////
             SYSTEM: begin
-                next_pc         = pc + 4;
+                branch          = 0;
+                branch_addr     = 0;
                 if (funct3 == 3'b000) begin
                     rs1_en          = 0;
                     rs2_en          = 0;
@@ -439,25 +448,16 @@ module decoder #(
                         illegal_inst = 1;
                     end
                     else begin
-                        if (USE_TRAP) begin
-                            case (funct12)
-                                FUNCT12_ECALL:  ecall = 1;
-                                FUNCT12_EBREAK: ebreak = 1;
-                                FUNCT12_MRET:   mret = 1;
-                                FUNCT12_WFI:    ; // NOP
-                                default:        illegal_inst = 1;
-                            endcase
-                        end
-                        else begin
-                            case (funct12)
-                                FUNCT12_EBREAK: ebreak = 1;     // leave for simulation verification purposes
-                                FUNCT12_WFI:    ; // NOP
-                                default:        illegal_inst = 1;
-                            endcase
-                        end
+                        case (funct12)
+                            FUNCT12_ECALL:  ecall = 1;
+                            FUNCT12_EBREAK: ebreak = 1;
+                            FUNCT12_MRET:   mret = 1;
+                            FUNCT12_WFI:    ; // NOP
+                            default:        illegal_inst = 1;
+                        endcase
                     end
                 end // if (funct3 == 3'b000)
-                else if (USE_CSR) begin
+                else begin
                     // CSR Instructions
                     rs1_en          = (funct3[2]) ? 0 : 1;
                     rs2_en          = 0;
@@ -465,6 +465,8 @@ module decoder #(
                     csr_explicit_rd = (dest_addr == 0) ? 0 : 1; // explicit read only of destination is not x0
                     src2            = csr_rd_data;
                     alt_data        = csr_rd_data;
+                    atomic_csr      = csr_addr_is_atomic & (lsu_op == LSU_CSRRW);
+                    illegal_inst    = csr_addr_is_illegal;
                     case (funct3)
                         FUNCT3_CSRRW: begin // read/write
                             src1            = rs1_data;
@@ -505,18 +507,6 @@ module decoder #(
                             illegal_inst = 1;
                         end
                     endcase
-                end // if (USE_CSR) begin
-                else begin
-                    rs1_en = 0;
-                    rs2_en = 0;
-                    csr_rd_en = 0;
-                    csr_explicit_rd = 0;
-                    src1 = 0;
-                    src2 = 0;
-                    alt_data = 0;
-                    alu_op = ALU_NOP;
-                    lsu_op = LSU_NOP;
-                    illegal_inst = 1;
                 end
             end
             ////////////////////////////////////////////////////////////
@@ -529,7 +519,8 @@ module decoder #(
             // BEGIN: Default (Illegal Instruction)
             ////////////////////////////////////////////////////////////
             default: begin // illegal instruction
-                next_pc = pc + 4;
+                branch = 0;
+                branch_addr = 0;
                 rs1_en = 0;
                 rs2_en = 0;
                 csr_rd_en = 0;

@@ -1,5 +1,6 @@
 //depend core.sv
 //depend core/*.sv
+//depend core/pipeline/*.sv
 //depend mem/rom.sv
 //depend mem/ram.sv
 //depend axi4_lite_manager.sv
@@ -13,7 +14,7 @@
 import saratoga::*;
 
 
-module saratoga_soc #(
+module soc #(
         parameter CLK_PERIOD    = DEFAULT_CLK_PERIOD    // system clock period in ns
     ) (
         input  logic clk,                       // system clock
@@ -33,12 +34,7 @@ module saratoga_soc #(
     localparam MTIME_BASE_ADDR      = DEFAULT_MTIME_BASE_ADDR;      // machine timer base address (see [CSR](./CSR.md))
     localparam AXI_BASE_ADDR        = DEFAULT_AXI_BASE_ADDR;        // AXI bus address space base (must be aligned to AXI address space)
     localparam AXI_TIMEOUT          = DEFAULT_AXI_TIMEOUT;          // AXI bus timeout in cycles
-    localparam HART_ID              = 0;                            // hardware thread id (see mhartid CSR)
     localparam RESET_ADDR           = DEFAULT_RESET_ADDR;           // program counter reset/boot address
-    localparam USE_CSR              = 1;                            // enable generation of the CSR module
-    localparam USE_TRAP             = 1;                            // enable generation of the Trap Unit (requires CSR)
-    localparam USE_MTIME            = 0;                            // enable generation of machine timer address space
-    localparam USE_AXI              = 1;                            // enable generation of AXI address space
 
 
     ////////////////////////////////////////////////////////////
@@ -103,12 +99,8 @@ module saratoga_soc #(
         .RAM_BASE_ADDR(RAM_BASE_ADDR),
         .MTIME_BASE_ADDR(MTIME_BASE_ADDR),
         .AXI_BASE_ADDR(AXI_BASE_ADDR),
-        .HART_ID(HART_ID),
         .RESET_ADDR(RESET_ADDR),
-        .USE_CSR(USE_CSR),
-        .USE_TRAP(USE_TRAP),
-        .USE_MTIME(USE_MTIME),
-        .USE_AXI(USE_AXI)
+        .HART_ID(0)
     ) core0 (
         .clk,
         .rst_n,
@@ -156,6 +148,7 @@ module saratoga_soc #(
     rom #(
         .ADDR_WIDTH(ROM_ADDR_WIDTH)
     ) rom0 (
+        .clk,
         .rd_en1(rom_rd_en1),
         .addr1(rom_addr1),
         .rd_data1(rom_rd_data1),

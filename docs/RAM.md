@@ -1,7 +1,7 @@
 # Random Access Memory (RAM)
 
 The RAM servers as the CPU's data memory.
-It features asynchronous reads and synchronous writes.
+It features synchronous reads and writes.
 
 ## Ports
 

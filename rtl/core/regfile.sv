@@ -5,9 +5,7 @@
 import saratoga::*;
 
 
-module regfile #(
-        
-    ) (
+module regfile (
         input  logic clk,                       // write port clock
         // reset not needed, registers can start in undefined state
 
@@ -27,9 +25,27 @@ module regfile #(
 
     rv32::word data [rv32::REG_COUNT-1:1];
 
-    assign rs1_data = (rs1_en && rs1_addr) ? data[rs1_addr] : 0;
-    assign rs2_data = (rs2_en && rs2_addr) ? data[rs2_addr] : 0;
+    // Read behavior (implement data bypass)
+    always_comb begin
+        if (rs1_en && (|rs1_addr)) begin
+            rs1_data = (dest_en && (rs1_addr==dest_addr))
+                    ? dest_data
+                    : data[rs1_addr];
+        end
+        else begin
+            rs1_data = 0;
+        end
+        if (rs2_en && (|rs2_addr)) begin
+            rs2_data = (dest_en && (rs2_addr==dest_addr))
+                    ? dest_data
+                    : data[rs2_addr];
+        end
+        else begin
+            rs2_data = 0;
+        end
+    end
 
+    // Write behavior
     always_ff @(posedge clk) begin
         if (dest_en && dest_addr) begin
             data[dest_addr] <= dest_data;

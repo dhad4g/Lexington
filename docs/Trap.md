@@ -53,7 +53,7 @@ and *interrupt*.
 ### Outputs
 
 - **`trap_req`** request to the Control Unit to insert trap into the pipeline
-- **`trap_pc[XLEN-1:0]`** destination of a trap; only valid if `trap_req` is asserted
+- **`trap_addr[XLEN-1:0]`** destination of a trap; only valid if `trap_req` is asserted
 - **`trap_epc[XLEN-1:0]`** address of faulting or interrupted instruction
 - **`trap_cause[XLEN-1:0]`** trap cause (see [`mcause` CSR](./CSR.md#machine-cause-register-mcause))
 - **`trap_val[XLEN-1:0]`** trap value (see [`mtval` CSR](./CSR.md#machine-trap-value-register-mtval))

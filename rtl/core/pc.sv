@@ -6,10 +6,12 @@ import saratoga::*;
 
 
 module pc #(
-        
+        parameter RESET_ADDR = DEFAULT_RESET_ADDR
     ) (
         input logic clk,                    // system clock
         input logic rst_n,                  // global synchronous reset (active-low)
+        input logic stall_fetch,            // stall Fetch Stage
+        input logic next_pc_en,             // enable override of PC+4
         input rv32::word next_pc,           // next program counter value
         output rv32::word pc                // current program counter value
     );
@@ -17,10 +19,10 @@ module pc #(
 
     always_ff @(posedge clk) begin
         if (!rst_n) begin
-            pc <= 0;
+            pc <= RESET_ADDR;
         end
-        else begin
-            pc <= next_pc;
+        else if (!stall_fetch) begin
+            pc <= (next_pc_en) ? next_pc : pc+4;
         end
     end
 

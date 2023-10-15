@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 
-`include rv32.sv
-`include saratoga.sv
+`include "rv32.sv"
+`include "saratoga.sv"
 import saratoga::*;
 
 
@@ -9,8 +9,8 @@ module id_ex (
         input  logic clk,
         input  logic rst_n,
 
-        input  logic stall,
-        input  logic squash,
+        input  logic stall_exec,
+        input  logic squash_decode,
 
         input  logic bubble_i,
         input  rv32::word pc_i,
@@ -30,11 +30,11 @@ module id_ex (
         output rv32::csr_addr_t csr_addr_o,
         output rv32::gpr_addr_t dest_o,
         output alu_op_t alu_op_o,
-        output lsu_op_t lsu_op_o,
+        output lsu_op_t lsu_op_o
     );
 
     always_ff @(posedge clk) begin
-        if (!rst_n) begin
+        if (!rst_n | squash_decode) begin
             bubble_o        <= 1;
             pc_o            <= 0;
             src1_o          <= 0;
@@ -42,14 +42,22 @@ module id_ex (
             alt_data_o      <= 0;
             csr_addr_o      <= 0;
             dest_o          <= 0;
-            alu_op_o        <= 0;
-            lsu_op_o        <= 0;
+            alu_op_o        <= ALU_NOP;
+            lsu_op_o        <= LSU_NOP;
         end
         else begin
-            if (squash) begin
+            if (bubble_i) begin
                 bubble_o        <= 1;
+                pc_o            <= 0;
+                src1_o          <= 0;
+                src2_o          <= 0;
+                alt_data_o      <= 0;
+                csr_addr_o      <= 0;
+                dest_o          <= 0;
+                alu_op_o        <= ALU_NOP;
+                lsu_op_o        <= LSU_NOP;
             end
-            else if (!stall) begin
+            else if (!stall_exec) begin
                 bubble_o        <= bubble_i;
                 pc_o            <= pc_i;
                 src1_o          <= src1_i;

@@ -14,18 +14,25 @@ module trap (
         input  rv32::word decode_pc,                        // PC of Decode Stage
         input  rv32::word exec_pc,                          // PC of Execute Stage
 
+        // Bubbles
+        input  logic bubble_fetch,
+        input  logic bubble_decode,
+        input  logic bubble_exec,
+
         // Trap related inputs
         input  logic trap_insert,                           // asserted by Control Unit when a trap is inserted into the pipeline
         input  rv32::word interrupts,                       // interrupts pending with all appropriate enable masks applied
-        input  rv32::word mtvec,                            // value of mtvec CSR
+        input  rv32::word mepc,                             // value of mepc CSR for trap returns
+        input  rv32::word mtvec,                            // value of mtvec CSR for traps
         input  logic load_store_n,                          // indicates source of load/store exception (Execute Stage; 0=store,1=load)
         input  rv32::word inst,                             // instruction bits (Decode Stage)
-        input  rv32::word jump_pc,                          // misaligned instruction address (Decode Stage)
+        input  rv32::word branch_addr,                      // misaligned instruction address (Decode Stage)
         input  rv32::word data_addr,                        // data load/store address (Execute Stage)
 
         // Trap related outputs
         output logic trap_req,                              // request to the Control Unit to insert trap into the pipeline
-        output rv32::word trap_pc,                          // destination of a trap
+        output logic trap_is_mret,                          // asserted if this is an MRET pseudo trap
+        output rv32::word trap_addr,                        // destination of a trap
         output rv32::word trap_epc,                         // address of faulting or interrupted instruction
         output rv32::word trap_cause,                       // trap cause (see mcause CSR)
         output rv32::word trap_val,                         // trap value (see mtval CSR)
@@ -39,7 +46,6 @@ module trap (
         input  logic inst_access_fault,                     // instruction access fault (Fetch Stage)
         input  logic inst_misaligned,                       // instruction misaligned (Decode Stage)
         input  logic illegal_inst,                          // illegal instruction (Decode Stage)
-        input  logic illegal_csr,                           // illegal CSR instruction (Decode Stage)
         input  logic ecall,                                 // environment call (Decode Stage)
         input  logic ebreak,                                // breakpoint (Decode Stage)
         input  logic data_misaligned,                       // load/store address misaligned (Execute Stage)
@@ -61,56 +67,50 @@ module trap (
 
     // Generate internal signals
     always_comb begin
-        if (mret) begin
+        if (mret & !bubble_decode) begin
             _exception = 1;
             _except_stage = 0;
             _except_cause = 0;
             _val = 0;
         end
-        else if (inst_access_fault) begin
+        else if (inst_access_fault & !bubble_exec) begin
             _exception = 1;
             _except_stage = 0;
             _except_cause = rv32::TRAP_CODE_INST_ACCESS_FAULT;
             _val = fetch_pc;
         end
-        else if (inst_misaligned) begin
+        else if (inst_misaligned & !bubble_decode) begin
             _exception = 1;
             _except_stage = 1;
             _except_cause = rv32::TRAP_CODE_INST_MISALIGNED;
-            _val = jump_pc;
+            _val = branch_addr;
         end
-        else if (illegal_inst) begin
+        else if (illegal_inst & !bubble_decode) begin
             _exception = 1;
             _except_stage = 1;
             _except_cause = rv32::TRAP_CODE_ILLEGAL_INST;
             _val = inst;
         end
-        else if (illegal_csr) begin
-            _exception = 1;
-            _except_stage = 1;
-            _except_cause = rv32::TRAP_CODE_ILLEGAL_INST;
-            _val = inst;
-        end
-        else if (ecall) begin
+        else if (ecall & !bubble_decode) begin
             _exception = 1;
             _except_stage = 1;
             _except_cause = rv32::TRAP_CODE_ENV_CALL_MMODE;
             _val = 0;
         end
-        else if (ebreak) begin
+        else if (ebreak & !bubble_decode) begin
             _exception = 1;
             _except_stage = 1;
             _except_cause = rv32::TRAP_CODE_BREAKPOINT;
             _val = 0;
         end
-        else if (data_misaligned) begin
+        else if (data_misaligned & !bubble_exec) begin
             _exception = 1;
             _except_stage = 2;
             _except_cause = (load_store_n) ? rv32::TRAP_CODE_LOAD_MISALIGNED
                                     : rv32::TRAP_CODE_STORE_MISALIGNED;
             _val = data_addr;
         end
-        if (data_access_fault) begin
+        if (data_access_fault & !bubble_exec) begin
             _exception = 1;
             _except_stage = 2;
             _except_cause = (load_store_n) ? rv32::TRAP_CODE_LOAD_ACCESS_FAULT
@@ -164,17 +164,20 @@ module trap (
     // Latch trap output data
     always_latch begin
         if (!rst_n) begin
+            trap_is_mret<= 0;
             trap_epc    <= 0;
             trap_cause  <= 0;
             trap_val    <= 0;
         end
         else begin
             if (_exception) begin
+                trap_is_mret<= mret;
                 trap_epc    <= _pc[_except_stage];
                 trap_cause  <= _except_cause;
                 trap_val    <= _val;
             end
             else if (_interrupt & !_trap_req) begin
+                trap_is_mret<= 0;
                 trap_epc    <= fetch_pc;
                 trap_cause  <= _int_cause;
                 trap_val    <= 0;
@@ -185,7 +188,7 @@ module trap (
     // Combinatorial output data
     always_comb begin
         if (!rst_n) begin
-            trap_pc         = 0;
+            trap_addr         = 0;
             squash_decode   = 0;
             squash_exec     = 0;
         end
@@ -200,23 +203,27 @@ module trap (
                 squash_exec     = 0;
             end
             // Trap destination PC
+            if (trap_is_mret) begin
+                // Trap return
+                trap_addr = mepc;
+            end
             if (trap_cause[rv32::XLEN-1]) begin
                 // interrupt
                 if (mtvec[1:0] == 2'b01) begin
                     // vectored
                     localparam _msb = rv32::XLEN-1;
                     localparam _lsb = MTVEC_ADDR_BIT_ALIGN;
-                    trap_pc[_msb:_lsb] = mtvec[_msb:_lsb];
-                    trap_pc[_lsb-1:0]  = 0;
+                    trap_addr[_msb:_lsb] = mtvec[_msb:_lsb];
+                    trap_addr[_lsb-1:0]  = 0;
                 end
                 else begin
                     // direct
-                    trap_pc = {mtvec[rv32::XLEN-1:2], 2'b00};
+                    trap_addr = {mtvec[rv32::XLEN-1:2], 2'b00};
                 end
             end
             else begin
                 // exception
-                trap_pc = {mtvec[rv32::XLEN-1:2], 2'b00};
+                trap_addr = {mtvec[rv32::XLEN-1:2], 2'b00};
             end
         end
     end

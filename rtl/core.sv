@@ -1,14 +1,5 @@
-//depend core/ibus.sv
-//depend core/dbus.sv
-//depend core/pc.sv
-//depend core/regfile.sv
-//depend core/fetch.sv
-//depend core/decoder.sv
-//depend core/alu.sv
-//depend core/lsu.sv
-//depend core/csr.sv
-//depend core/trap.sv
-//depend core/mtime.sv
+//depend core/*.sv
+//depend core/pipeline/*.sv
 `timescale 1ns/1ps
 
 `include "rv32.sv"
@@ -26,12 +17,8 @@ module core #(
         parameter RAM_BASE_ADDR     = DEFAULT_RAM_BASE_ADDR,        // RAM base address (must be aligned to RAM size)
         parameter MTIME_BASE_ADDR   = DEFAULT_MTIME_BASE_ADDR,      // machine timer base address (see [CSR](./CSR.md))
         parameter AXI_BASE_ADDR     = DEFAULT_AXI_BASE_ADDR,        // AXI bus address space base (must be aligned to AXI address space)
-        parameter HART_ID           = 0,                            // hardware thread id (see mhartid CSR)
         parameter RESET_ADDR        = DEFAULT_RESET_ADDR,           // program counter reset/boot address
-        parameter USE_CSR           = 1,                            // enable generation of the CSR module
-        parameter USE_TRAP          = 1,                            // enable generation of the Trap Unit (requires CSR)
-        parameter USE_MTIME         = 1,                            // enable generation of machine timer address space
-        parameter USE_AXI           = 1                             // enable generation of AXI address space
+        parameter HART_ID           = 0                             // hardware thread id (see mhartid CSR)
     ) (
         input  logic clk,                                           // global system clock
         input  logic rst_n,                                         // global reset, active-low
@@ -75,6 +62,17 @@ module core #(
     );
 
 
+    // Interrupt mapping
+    rv32::word int_sources;
+    assign int_sources = {
+        4'b0,
+        2'b0, gpioc_int_1, gpioc_int_0,
+        gpiob_int_1, gpiob_int_0, gpioa_int_1, gpioa_int_0,
+        timer1_int, timer0_int, uart0_tx_int, uart0_rx_int,
+        16'b0
+    };
+
+
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
     // BEGIN: Internal Wires
@@ -91,12 +89,54 @@ module core #(
     rv32::word dbus_rd_data;
     rv32::word dbus_wr_data;
     logic [(rv32::XLEN/8)-1:0] dbus_wr_strobe;
-    logic dbus_wait;
+    logic stall;  // dbus_wait
     logic dbus_err;
+    // Trap
+    rv32::word interrupts;      // interrupts pending with masks
+    logic trap_req;
+    logic trap_is_mret;
+    rv32::word mepc;
+    rv32::word mtvec;
+    rv32::word trap_epc;
+    rv32::word trap_cause;
+    rv32::word trap_val;
+    logic load_store_n;
+    // Control
+    logic branch;
+    logic trap_insert;
+    logic atomic_csr;
+    logic atomic_csr_pending;
+    logic next_pc_en;
     // PC
-    rv32::word pc;
+    rv32::word fetch_pc;
+    rv32::word decode_pc;
+    rv32::word exec_pc;
+    rv32::word branch_addr;
+    rv32::word trap_addr;
     rv32::word next_pc;
-    rv32::word decoder_next_pc;
+    // Fetch Stage
+    logic bubble_fetch;
+    // Decode Stage
+    logic bubble_decode;
+    logic squash_decode;
+    rv32::word decode_src1;
+    rv32::word decode_src2;
+    rv32::word decode_alt_data;
+    rv32::csr_addr_t decode_csr_addr;
+    rv32::gpr_addr_t decode_dest;
+    alu_op_t decode_alu_op;
+    lsu_op_t decode_lsu_op;
+    // Execute Stage
+    logic bubble_exec;
+    logic squash_exec;
+    rv32::word exec_src1;
+    rv32::word exec_src2;
+    rv32::word exec_alu_result;
+    rv32::word exec_alt_data;
+    // rv32::csr_addr_t exec_csr_addr;
+    // rv32::gpr_addr_t exec_dest;
+    alu_op_t exec_alu_op;
+    lsu_op_t exec_lsu_op;
     // Register File
     logic rs1_en;
     logic rs2_en;
@@ -107,47 +147,34 @@ module core #(
     rv32::word rs1_data;
     rv32::word rs2_data;
     rv32::word dest_data;
-    // Decode/ALU/LSU
-    rv32::word src1;
-    rv32::word src2;
-    rv32::word alt_data;
-    rv32::word alu_result;
-    alu_op_t alu_op;
-    lsu_op_t lsu_op;
-    logic alu_zero;
     // CSR
     logic csr_rd_en;
     logic csr_explicit_rd;
     logic csr_wr_en;
-    rv32::csr_addr_t csr_addr;
+    rv32::csr_addr_t csr_rd_addr;
+    rv32::csr_addr_t csr_wr_addr;
     rv32::word csr_rd_data;
     rv32::word csr_wr_data;
-    logic trap_rd_en;
-    logic trap_wr_en;
-    rv32::word trap_rd_data;
-    // Control signals
-    logic global_mie;
-    logic endianness;
-    logic mret;
-    logic exception;
-    logic trap;
+    logic csr_addr_is_atomic;
+    logic csr_addr_is_illegal;
     // Machine Timer
     logic mtime_rd_en;
     logic mtime_wr_en;
     logic [MTIME_ADDR_WIDTH-1:0] mtime_addr;
     rv32::word mtime_rd_data;
     logic [63:0] time_rd_data;  // unprivileged alias
-    logic mtime_int;
+    logic mtime_interrupt;
+    // Misc. control signals
+    logic endianness;
     // Exceptions
+    logic mret;
     logic inst_access_fault;
     logic inst_misaligned;
     logic data_access_fault;
     logic data_misaligned;
-    logic load_store_n;
     logic illegal_inst;
     logic ecall;
     logic ebreak;
-    logic illegal_csr;
     ////////////////////////////////////////////////////////////
     // END: Internal Wires
     ////////////////////////////////////////////////////////////
@@ -159,60 +186,62 @@ module core #(
     ////////////////////////////////////////////////////////////
     // BEGIN: Memory Bus Instantiations
     ////////////////////////////////////////////////////////////
+    assign ibus_rd_en = 1;
+    assign ibus_addr  = fetch_pc;
     ibus #(
-            .ROM_ADDR_WIDTH(ROM_ADDR_WIDTH),
-            .ROM_BASE_ADDR(ROM_BASE_ADDR)
-        ) IBus_inst (
-            .rd_en(ibus_rd_en),
-            .addr(ibus_addr),
-            .rom_rd_data(rom_rd_data1),
-            .rom_rd_en(rom_rd_en1),
-            .rom_addr(rom_addr1),
-            .rd_data(ibus_rd_data),
-            .inst_access_fault
-        );
+        .ROM_ADDR_WIDTH(ROM_ADDR_WIDTH),
+        .ROM_BASE_ADDR(ROM_BASE_ADDR)
+    ) IBUS (
+        .rd_en(ibus_rd_en),
+        .addr(ibus_addr),
+        .rd_data(ibus_rd_data),
+        .rom_rd_data(rom_rd_data1),
+        .rom_rd_en(rom_rd_en1),
+        .rom_addr(rom_addr1),
+        .inst_access_fault
+    );
     dbus #(
-            .ROM_ADDR_WIDTH(ROM_ADDR_WIDTH),
-            .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
-            .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
-            .ROM_BASE_ADDR(ROM_BASE_ADDR),
-            .RAM_BASE_ADDR(RAM_BASE_ADDR),
-            .MTIME_BASE_ADDR(MTIME_BASE_ADDR),
-            .AXI_BASE_ADDR(AXI_BASE_ADDR),
-            .USE_MTIME(USE_MTIME),
-            .USE_AXI(USE_AXI)
-        ) DBus_inst (
-            .rd_en(dbus_rd_en),
-            .wr_en(dbus_wr_en),
-            .addr(dbus_addr),
-            .wr_data_i(dbus_wr_data),
-            .wr_strobe_i(dbus_wr_strobe),
-            .rom_rd_data(rom_rd_data2),
-            .ram_rd_data,
-            .mtime_rd_data,
-            .axi_rd_data,
-            .axi_access_fault,
-            .axi_busy,
-            .rd_data(dbus_rd_data),
-            .rom_rd_en(rom_rd_en2),
-            .rom_addr(rom_addr2),
-            .ram_rd_en,
-            .ram_wr_en,
-            .ram_addr,
-            .mtime_rd_en,
-            .mtime_wr_en,
-            .mtime_addr,
-            .axi_rd_en,
-            .axi_wr_en,
-            .axi_addr,
-            .wr_data_o(wr_data),
-            .wr_strobe_o(wr_strobe),
-            .data_misaligned,
-            .data_access_fault,
-            .load_store_n,
-            .dbus_wait,
-            .dbus_err
-        );
+        .ROM_ADDR_WIDTH(ROM_ADDR_WIDTH),
+        .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
+        .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
+        .ROM_BASE_ADDR(ROM_BASE_ADDR),
+        .RAM_BASE_ADDR(RAM_BASE_ADDR),
+        .MTIME_BASE_ADDR(MTIME_BASE_ADDR),
+        .AXI_BASE_ADDR(AXI_BASE_ADDR)
+    ) DBUS (
+        .clk,
+        .rst_n,
+        .rd_en(dbus_rd_en),
+        .wr_en(dbus_wr_en),
+        .addr(dbus_addr),
+        .wr_data_i(dbus_wr_data),
+        .wr_strobe_i(dbus_wr_strobe),
+        .rom_rd_data(rom_rd_data2),
+        .ram_rd_data,
+        .mtime_rd_data,
+        .axi_rd_data,
+        .axi_access_fault,
+        .axi_busy,
+        .rd_data(dbus_rd_data),
+        .rom_rd_en(rom_rd_en2),
+        .rom_addr(rom_addr2),
+        .ram_rd_en,
+        .ram_wr_en,
+        .ram_addr,
+        .mtime_rd_en,
+        .mtime_wr_en,
+        .mtime_addr,
+        .axi_rd_en,
+        .axi_wr_en,
+        .axi_addr,
+        .wr_data_o(wr_data),
+        .wr_strobe_o(wr_strobe),
+        .data_misaligned,
+        .data_access_fault,
+        .load_store_n,
+        .dbus_wait(stall),
+        .dbus_err
+    );
     ////////////////////////////////////////////////////////////
     // END: Memory Bus Instantiations
     ////////////////////////////////////////////////////////////
@@ -220,247 +249,289 @@ module core #(
 
 
 
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
+    // BEGIN: Pipeline Registers
+    ////////////////////////////////////////////////////////////
+    if_id IF_ID (
+        .clk,
+        .rst_n,
+        .stall_decode(stall),
+        .bubble_i(bubble_fetch),
+        .inst_i(ibus_rd_data),
+        .pc_i(fetch_pc),
+        .bubble_o(bubble_decode),
+        .pc_o(decode_pc),
+        .inst_o(inst)
+    );
+    id_ex ID_EX (
+        .clk,
+        .rst_n,
+        .stall_exec(stall),
+        .squash_decode,
+        .bubble_i(bubble_decode),
+        .pc_i(decode_pc),
+        .src1_i(decode_src1),
+        .src2_i(decode_src2),
+        .alt_data_i(decode_alt_data),
+        .csr_addr_i(csr_rd_addr),
+        .dest_i(decode_dest),
+        .alu_op_i(decode_alu_op),
+        .lsu_op_i(decode_lsu_op),
+        .bubble_o(bubble_exec),
+        .pc_o(exec_pc),
+        .src1_o(exec_src1),
+        .src2_o(exec_src2),
+        .alt_data_o(exec_alt_data),
+        .csr_addr_o(csr_wr_addr),
+        .dest_o(dest_addr),
+        .alu_op_o(exec_alu_op),
+        .lsu_op_o(exec_lsu_op)
+    );
+    ////////////////////////////////////////////////////////////
+    // END: Pipeline Registers
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////s
+
+
+
 
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
-    // BEGIN: PC and Register File Instantiations
+    // BEGIN: Register File and CSR
     ////////////////////////////////////////////////////////////
-    pc PC_inst (
+    regfile REGFILE (
+        .clk,
+        .rs1_en,
+        .rs2_en,
+        .rs1_addr,
+        .rs2_addr,
+        .rs1_data,
+        .rs2_data,
+        .dest_en,
+        .dest_addr,
+        .dest_data
+    );
+    csr #(
+        .HART_ID(HART_ID)
+    ) CSR (
+        .clk,
+        .rst_n,
+        .rd_en(csr_rd_en),
+        .explicit_rd(csr_explicit_rd),
+        .wr_en(csr_wr_en),
+        .rd_addr(csr_rd_addr),
+        .wr_addr(csr_wr_addr),
+        .rd_data(csr_rd_data),
+        .wr_data(csr_wr_data),
+        .addr_is_atomic(csr_addr_is_atomic),
+        .addr_is_illegal(csr_addr_is_illegal),
+        .time_rd_data,
+        .trap_insert,
+        .trap_is_mret,
+        .trap_epc,
+        .trap_cause,
+        .trap_val,
+        .mepc,
+        .mtvec,
+        .mtime_interrupt,
+        .int_sources,
+        .interrupts,
+        .atomic_csr_pending,
+        .stall_exec(stall),
+        .bubble_exec,
+        .endianness
+    );
+    ////////////////////////////////////////////////////////////
+    // END: Register File and CSR
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
+
+
+
+
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
+    // BEGIN: Control and Trap
+    ////////////////////////////////////////////////////////////
+    control CONTROL (
+        .clk,
+        .rst_n,
+        .branch,
+        .branch_addr,
+        .trap_req,
+        .trap_addr,
+        .atomic_csr,
+        .bubble_decode,
+        .bubble_exec,
+        .next_pc_en,
+        .next_pc,
+        .bubble_fetch,
+        .trap_insert,
+        .atomic_csr_pending
+    );
+    trap TRAP (
+        .clk,
+        .rst_n,
+        .fetch_pc,
+        .decode_pc,
+        .exec_pc,
+        .bubble_fetch,
+        .bubble_decode,
+        .bubble_exec,
+        .trap_insert,
+        .interrupts,
+        .mepc,
+        .mtvec,
+        .load_store_n,
+        .inst,
+        .branch_addr,
+        .data_addr(exec_alu_result),
+        .trap_req,
+        .trap_is_mret,
+        .trap_addr,
+        .trap_epc,
+        .trap_cause,
+        .trap_val,
+        .squash_decode,
+        .squash_exec,
+        .mret,
+        .inst_access_fault,
+        .inst_misaligned,
+        .illegal_inst,
+        .ecall,
+        .ebreak,
+        .data_misaligned,
+        .data_access_fault
+    );
+    ////////////////////////////////////////////////////////////
+    // END: Control and Trap
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
+
+
+
+
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
+    // BEGIN: Fetch Stage
+    ////////////////////////////////////////////////////////////
+    pc #(
+        .RESET_ADDR(RESET_ADDR)
+    ) PC (
+        .clk,
+        .rst_n,
+        .stall_fetch(stall),
+        .next_pc_en,
+        .next_pc,
+        .pc(fetch_pc)
+    );
+    ////////////////////////////////////////////////////////////
+    // END: Fetch Stage
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
+
+
+
+
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
+    // BEGIN: Decode Stage
+    ////////////////////////////////////////////////////////////
+    decoder DECODER (
+        .inst,
+        .pc(decode_pc),
+        .branch,
+        .branch_addr,
+        .rs1_en,
+        .rs2_en,
+        .rs1_addr,
+        .rs2_addr,
+        .rs1_data,
+        .rs2_data,
+        .csr_rd_en,
+        .csr_explicit_rd,
+        .csr_addr(csr_rd_addr),
+        .csr_rd_data,
+        .csr_addr_is_atomic,
+        .csr_addr_is_illegal,
+        .atomic_csr,
+        .alu_op(decode_alu_op),
+        .src1(decode_src1),
+        .src2(decode_src2),
+        .lsu_op(decode_lsu_op),
+        .alt_data(decode_alt_data),
+        .dest_addr(decode_dest),
+        .illegal_inst,
+        .inst_misaligned,
+        .ecall,
+        .ebreak,
+        .mret
+    );
+    ////////////////////////////////////////////////////////////
+    // END: Decode Stage
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
+
+
+
+
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
+    // BEGIN: Execute Stage
+    ////////////////////////////////////////////////////////////
+    alu ALU (
+        .alu_op(exec_alu_op),
+        .src1(exec_src1),
+        .src2(exec_src2),
+        .result(exec_alu_result)
+    );
+    lsu LSU (
+        .lsu_op(exec_lsu_op),
+        .alu_result(exec_alu_result),
+        .alt_data(exec_alt_data),
+        .endianness,
+        .bubble(bubble_exec),
+        .stall,
+        .dest_en,
+        .dest_addr,
+        .dest_data,
+        .dbus_rd_data,
+        .dbus_rd_en,
+        .dbus_wr_en,
+        .dbus_addr,
+        .dbus_wr_data,
+        .dbus_wr_strobe,
+        .dbus_err,
+        .csr_wr_en,
+        .csr_wr_data
+    );
+    ////////////////////////////////////////////////////////////
+    // END: Execute Stage
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
+
+
+
+
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
+    // BEGIN: Machine Timer
+    ////////////////////////////////////////////////////////////
+    mtime MTIME (
             .clk,
             .rst_n,
-            .next_pc,
-            .pc
-        );
-    regfile RegFile_inst (
-            .clk,
-            .rs1_en,
-            .rs2_en,
-            .dest_en,
-            .rs1_addr,
-            .rs2_addr,
-            .dest_addr,
-            .rs1_data,
-            .rs2_data,
-            .dest_data
+            .rd_en(mtime_rd_en),
+            .wr_en(mtime_wr_en),
+            .addr(mtime_addr),
+            .wr_data,
+            .wr_strobe,
+            .rd_data(mtime_rd_data),
+            .time_rd_data,
+            .interrupt(mtime_interrupt)
         );
     ////////////////////////////////////////////////////////////
-    // END: PC and Register File Instantiations
-    ////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////
-
-
-
-
-    ////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////
-    // BEGIN: Fetch/Decoder/ALU/LSU Instantiations
-    ////////////////////////////////////////////////////////////
-    fetch Fetch_inst (
-            .pc,
-            .ibus_rd_en,
-            .ibus_addr,
-            .ibus_rd_data,
-            .inst
-        );
-    decoder #(
-            .USE_CSR(USE_CSR),
-            .USE_TRAP(USE_TRAP)
-        ) Decoder_inst (
-            .inst,
-            .pc,
-            .rs1_data,
-            .rs2_data,
-            .csr_rd_data,
-            .alu_zero,
-            .rs1_en,
-            .rs2_en,
-            .rs1_addr,
-            .rs2_addr,
-            .csr_rd_en,
-            .csr_explicit_rd,
-            .csr_addr,
-            .src1,
-            .src2,
-            .alt_data,
-            .alu_op,
-            .lsu_op,
-            .dest_addr,
-            .next_pc(decoder_next_pc),
-            .illegal_inst,
-            .inst_misaligned,
-            .ecall,
-            .ebreak,
-            .mret
-        );
-    alu ALU_inst (
-            .src1,
-            .src2,
-            .alu_op,
-            .result(alu_result),
-            .zero(alu_zero)
-        );
-    lsu LSU_inst (
-            .lsu_op,
-            .alu_result,
-            .alt_data,
-            .dest_addr,
-            .dbus_rd_data,
-            .dbus_wait,
-            .dbus_err,
-            .endianness,
-            .dest_en,
-            .dest_data,
-            .dbus_rd_en,
-            .dbus_wr_en,
-            .dbus_addr,
-            .dbus_wr_data,
-            .dbus_wr_strobe,
-            .csr_wr_en,
-            .csr_wr_data
-        );
-    ////////////////////////////////////////////////////////////
-    // END: Fetch, Decoder, ALU, LSU, Register File Instantiations
-    ////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////
-
-
-
-
-    ////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////
-    // BEGIN: Optional CSR Instantiation
-    ////////////////////////////////////////////////////////////
-    generate
-    if (USE_CSR) begin : gen_csr
-        csr #(
-                .HART_ID(HART_ID)
-            ) CSR_inst (
-                .clk,
-                .rst_n,
-                .rd_en(csr_rd_en),
-                .explicit_rd(csr_explicit_rd),
-                .wr_en(csr_wr_en),
-                .addr(csr_addr),
-                .rd_data(csr_rd_data),
-                .wr_data(csr_wr_data),
-                .trap_rd_en,
-                .trap_wr_en,
-                .trap_rd_data,
-                .time_rd_data,
-                .global_mie,
-                .endianness,
-                .illegal_csr,
-                .dbus_wait,
-                .mret,
-                .trap
-            );
-    end // if (USE_CSR)
-    else begin
-        assign csr_rd_data = 0;
-        assign global_mie = 0;
-        assign trap_rd_en = 0;
-        assign trap_wr_en = 0;
-        assign trap_wr_data = 0;
-        assign endianness = 0; // little-endian
-        assign illegal_csr = 0;
-    end // if (!USE_CSR)
-    endgenerate
-    ////////////////////////////////////////////////////////////
-    // END: Optional CSR Instantiation
-    ////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////
-
-
-
-
-    ////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////
-    // BEGIN: Optional Trap Unit Instantiation
-    ////////////////////////////////////////////////////////////
-    generate
-    if (USE_TRAP) begin : gen_trap
-        trap #(
-                .RESET_ADDR(RESET_ADDR)
-            ) TRAP_inst (
-                .clk,
-                .rst_n,
-                .pc,
-                .decoder_next_pc,
-                .global_mie,
-                .csr_rd_en(trap_rd_en),
-                .csr_wr_en(trap_wr_en),
-                .csr_addr,
-                .csr_wr_data,
-                .mret,
-                .dbus_wait,
-                .inst_access_fault,
-                .inst_misaligned,
-                .illegal_inst,
-                .illegal_csr,
-                .inst,
-                .ecall,
-                .ebreak,
-                .data_misaligned,
-                .data_access_fault,
-                .load_store_n,
-                .data_addr(alu_result),
-                .mtime_int,
-                .gpioa_int_0,
-                .gpioa_int_1,
-                .gpiob_int_0,
-                .gpiob_int_1,
-                .gpioc_int_0,
-                .gpioc_int_1,
-                .uart0_rx_int,
-                .uart0_tx_int,
-                .timer0_int,
-                .timer1_int,
-                .next_pc,
-                .csr_rd_data(trap_rd_data),
-                .exception,
-                .trap
-            );
-    end // if (USE_TRAP)
-    else begin
-        assign next_pc = (dbus_wait) ? pc : decoder_next_pc;
-        assign trap_rd_data = 0;
-        assign trap = 0;
-    end // if/else (USE_TRAP)
-    endgenerate
-    ////////////////////////////////////////////////////////////
-    // END: Optional Trap Unit Instantiation
-    ////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////
-
-
-
-
-    ////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////
-    // BEGIN: Optional Machine Timer Instantiation
-    ////////////////////////////////////////////////////////////
-    generate
-    if (USE_MTIME) begin : gen_mtime
-        mtime MTIME_inst (
-                .clk,
-                .rst_n,
-                .rd_en(mtime_rd_en),
-                .wr_en(mtime_wr_en),
-                .addr(mtime_addr),
-                .wr_data,
-                .wr_strobe,
-                .rd_data(mtime_rd_data),
-                .interrupt(mtime_int)
-            );
-    end // if (USE_MTIME)
-    else begin
-    end // if/else (USE_MTIME)
-        assign mtime_rd_data = 0;
-        assign time_rd_data = 0;
-        assign mtime_int = 0;
-    endgenerate
-    ////////////////////////////////////////////////////////////
-    // END: Optional Machine Timer Instantiation
+    // END: Machine Timer
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
 

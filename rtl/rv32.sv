@@ -53,9 +53,9 @@ package rv32;
 
     // RISC-V privilege is encoded as a 2-bit value
     typedef enum logic [1:0] {
-        UMODE   = 3'b00,    // user-mode
-        SMODE   = 3'b01,    // supervisor-mode
-        MMODE   = 3'b11     // machine-mode
+        UMODE   = 2'b00,    // user-mode
+        SMODE   = 2'b01,    // supervisor-mode
+        MMODE   = 2'b11     // machine-mode
     } priv_mode_t;
 
 

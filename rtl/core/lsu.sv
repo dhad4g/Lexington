@@ -5,16 +5,16 @@
 import saratoga::*;
 
 
-module lsu #(
-        
-    ) (
+module lsu (
         // clock not needed; module is purely combinatorial
         // reset not needed; module is combinatorial and stateless
 
         input lsu_op_t lsu_op,                                  // LSU operation select
         input rv32::word alu_result,                            // output from alu (data or mem addr)
         input rv32::word alt_data,                              // data source for store and CSR read instructions
-        input logic endianness,                                 // data memory endiannes select (0=little,1=big)
+        input logic endianness,                                 // data memory endianness select (0=little,1=big)
+        input logic bubble,                                     // asserted if this instruction is a bubble
+        input  logic stall,                                     // asserted if stage is stalled
 
         // Register File write port
         output logic dest_en,                                   // register file write enable
@@ -28,7 +28,6 @@ module lsu #(
         output rv32::word dbus_addr,                            // memory read address (byte-addressable)
         output rv32::word dbus_wr_data,                         // memory write data
         output logic [(rv32::XLEN/8)-1:0] dbus_wr_strobe,       // write strobes, indicate which byte lanes hold valid data
-        input  logic dbus_wait,                                 // asserted if DBus requires additional cycle(s) to complete transaction
         input  logic dbus_err,                                  // if asserted, operation is aborted
 
         // CSR write port
@@ -154,7 +153,7 @@ module lsu #(
                 csr_wr_en  = 0;
             end
         endcase
-        if (dbus_wait | dbus_err) begin
+        if (stall | bubble | dbus_err) begin
             // override register file write enable
             dest_en     = 0;
         end

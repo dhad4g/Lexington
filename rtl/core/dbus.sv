@@ -13,12 +13,10 @@ module dbus #(
         parameter ROM_BASE_ADDR     = DEFAULT_ROM_BASE_ADDR,        // ROM base address (must be aligned to ROM size)
         parameter RAM_BASE_ADDR     = DEFAULT_RAM_BASE_ADDR,        // RAM base address (must be aligned to RAM size)
         parameter MTIME_BASE_ADDR   = DEFAULT_MTIME_BASE_ADDR,      // machine timer base address (see [CSR](./CSR.md))
-        parameter AXI_BASE_ADDR     = DEFAULT_AXI_BASE_ADDR,        // AXI bus address space base (must be aligned to AXI address space)
-        parameter USE_MTIME         = 1,                            // enable generation of machine timer address space
-        parameter USE_AXI           = 1                             // enable generation of AXI address space
+        parameter AXI_BASE_ADDR     = DEFAULT_AXI_BASE_ADDR        // AXI bus address space base (must be aligned to AXI address space)
     ) (
-        // clock not needed; module is asynchronous
-        // reset not needed; module is read-only
+        input  logic clk,
+        input  logic rst_n,
 
         input  logic rd_en,                                         // read enable from LSU
         input  logic wr_en,                                         // write enable from LSU
@@ -80,15 +78,34 @@ module dbus #(
     assign is_axi_addr      = (AXI_BASE_ADDR == mask_upper_bits(addr, AXI_ADDR_WIDTH));                                 // byte-addressable
 
 
-    // Set data_misaligned, load_store_n, and dbus_wait
+    // Set data_misaligned, load_store_n, axi_wait, and dbus_wait
+    logic axi_wait, ram_wait;
     assign data_misaligned  = (rd_en | wr_en) & ((addr[rv32::ADDR_BITS_IN_WORD-1:0]));
     assign load_store_n     = rd_en;
-    assign dbus_wait        = ((rd_en | wr_en) && USE_AXI && is_axi_addr) ? axi_busy : 0;
+    assign axi_wait         = ((rd_en | wr_en) && is_axi_addr) ? axi_busy : 0;
+    assign dbus_wait        = ram_wait | axi_wait;
     assign dbus_err         = data_misaligned | data_access_fault;
 
     // Pass through wr_data and wr_strobe
     assign wr_data_o = wr_data_i;
     assign wr_strobe_o = wr_strobe_i;
+
+    // RAM and ROM read takes 2 cycles
+    logic ram_done;
+    assign ram_wait = rd_en & (is_ram_addr | is_rom_addr) & !ram_done;
+    always_ff @(posedge clk) begin
+        if (!rst_n) begin
+            ram_done <= 0;
+        end
+        else begin
+            if (ram_done) begin
+                ram_done <= 0;
+            end
+            else begin
+                ram_done <= rd_en & (is_ram_addr | is_rom_addr);
+            end
+        end
+    end
 
     // Read/Write enable and read data routing
     always_comb begin
@@ -119,12 +136,12 @@ module dbus #(
                 ram_wr_en = wr_en;
                 rd_data = ram_rd_data;
             end
-            else if (USE_MTIME && is_mtime_addr) begin
+            else if (is_mtime_addr) begin
                 mtime_rd_en = rd_en;
                 mtime_wr_en = wr_en;
                 rd_data = mtime_rd_data;
             end
-            else if (USE_AXI && is_axi_addr) begin
+            else if (is_axi_addr) begin
                 data_access_fault = axi_access_fault;
                 axi_rd_en = rd_en;
                 axi_wr_en = wr_en;

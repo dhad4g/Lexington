@@ -16,10 +16,12 @@ module csr #(
         input  logic rd_en,                             // read enable
         input  logic explicit_rd,                       // indicates explicit CSR read
         input  logic wr_en,                             // write enable
-        input  rv32::csr_addr_t addr,                   // read/write address
+        input  rv32::csr_addr_t rd_addr,                // read address
+        input  rv32::csr_addr_t wr_addr,                // write address
         output rv32::word rd_data,                      // read data
         input  rv32::word wr_data,                      // write data
-        output logic illegal_csr,                       // indicates illegal CSR address or access permission
+        output logic addr_is_atomic,                    // indicates read to atomic CSR
+        output logic addr_is_illegal,                   // indicates illegal CSR address or access permission
 
         // Time CSR
         input  logic [63:0] time_rd_data,               // read-only unprivileged time/timeh CSR
@@ -44,9 +46,11 @@ module csr #(
         input  logic bubble_exec,                       // asserted if the Execute Stage has a bubble
 
         // Misc. Outputs
-        output rv32::priv_mode_t priv,                  // current privilege mode
         output logic endianness                         // effective data memory endianness
     );
+
+    // Current privilege mode
+    rv32::priv_mode_t priv;
 
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
@@ -246,119 +250,153 @@ module csr #(
     ////////////////////////////////////////////////////////////
     always_comb begin
         if (!rst_n) begin
-            rd_data     = 0;
-            illegal_csr = 0;
+            addr_is_atomic  = 0;
+            addr_is_illegal = 0;
+            rd_data = 0;
         end
         else begin
-            logic _illegal; // track csr address search across privilege levels
-            _illegal = 0;
-            // default illegal_csr, trap_rd_en, & trap_wr_en to 0
-            illegal_csr = 0;
+            logic addr_is_atomic;  // read enable not applied
+            logic _rd_data; // read data before bypass
+            // default addr_is_illegal to 0
+            addr_is_illegal = 0;
             // User-Mode CSRs
-            case (addr)
+            case (rd_addr)
                 rv32::csr_addr_cycle: begin
-                    rd_data = mcycle[31:0];
+                    addr_is_atomic  = 0;
+                    _rd_data = mcycle[31:0];
                 end
                 rv32::csr_addr_cycleh: begin
-                    rd_data = mcycle[63:32];
+                    addr_is_atomic  = 0;
+                    _rd_data = mcycle[63:32];
                 end
                 rv32::csr_addr_instret: begin
-                    rd_data = minstret[31:0];
+                    addr_is_atomic  = 0;
+                    _rd_data = minstret[31:0];
                 end
                 rv32::csr_addr_instreth: begin
-                    rd_data = minstret[63:32];
+                    addr_is_atomic  = 0;
+                    _rd_data = minstret[63:32];
                 end
                 rv32::csr_addr_time: begin
-                    rd_data = time_rd_data[31:0];
+                    addr_is_atomic  = 0;
+                    _rd_data = time_rd_data[31:0];
                 end
                 rv32::csr_addr_timeh: begin
-                    rd_data = time_rd_data[63:32];
+                    addr_is_atomic  = 0;
+                    _rd_data = time_rd_data[63:32];
                 end
                 default: begin
-                    rd_data = 0;
-                    _illegal = 1;
+                    _rd_data = 0;
+                    addr_is_illegal = 1;
                 end
             endcase
             // Supervisor-Mode CSRs
-            if (_illegal && priv >= rv32::SMODE) begin
-                _illegal = 0;
-                case (addr)
+            if (addr_is_illegal && priv >= rv32::SMODE) begin
+                addr_is_illegal = 0;
+                case (rd_addr)
                     default: begin
-                        _illegal = 1;
+                        addr_is_atomic  = 0;
+                        addr_is_illegal = 1;
+                        _rd_data = 0;
                     end
                 endcase
             end // if (priv >= smode)
             // Machine-Mode CSRs
-            if (_illegal && priv >= rv32::MMODE) begin
-                _illegal = 0;
-                case (addr)
+            if (addr_is_illegal && priv >= rv32::MMODE) begin
+                addr_is_illegal = 0;
+                case (rd_addr)
                     rv32::csr_addr_misa: begin
-                        rd_data = misa;
+                        addr_is_atomic  = 0;
+                        _rd_data = misa;
                     end
                     rv32::csr_addr_mvendorid: begin
-                        rd_data = mvendorid;
+                        addr_is_atomic  = 0;
+                        _rd_data = mvendorid;
                     end
                     rv32::csr_addr_marchid: begin
-                        rd_data = marchid;
+                        addr_is_atomic  = 0;
+                        _rd_data = marchid;
                     end
                     rv32::csr_addr_mimpid: begin
-                        rd_data = mimpid;
+                        addr_is_atomic  = 0;
+                        _rd_data = mimpid;
                     end
                     rv32::csr_addr_mhartid: begin
-                        rd_data = mhartid;
+                        addr_is_atomic  = 0;
+                        _rd_data = mhartid;
                     end
                     rv32::csr_addr_mstatus: begin
-                        rd_data = mstatus[31:0];
+                        addr_is_atomic  = 1;
+                        _rd_data = mstatus[31:0];
                     end
                     rv32::csr_addr_mstatush: begin
-                        rd_data = mstatus[63:32];
+                        addr_is_atomic  = 1;
+                        _rd_data = mstatus[63:32];
                     end
                     rv32::csr_addr_mtvec: begin
-                        rd_data = mtvec;
+                        addr_is_atomic  = 1;
+                        _rd_data = mtvec;
                     end
                     rv32::csr_addr_mip: begin
-                        rd_data = mip;
+                        addr_is_atomic  = 1;
+                        _rd_data = mip;
                     end
                     rv32::csr_addr_mie: begin
-                        rd_data = mie;
+                        addr_is_atomic  = 1;
+                        _rd_data = mie;
                     end
                     rv32::csr_addr_mcycle: begin
-                        rd_data = mcycle[31:0];
+                        addr_is_atomic  = 1;
+                        _rd_data = mcycle[31:0];
                     end
                     rv32::csr_addr_mcycleh: begin
-                        rd_data = mcycle[63:32];
+                        addr_is_atomic  = 1;
+                        _rd_data = mcycle[63:32];
                     end
                     rv32::csr_addr_minstret: begin
-                        rd_data = minstret[31:0];
+                        addr_is_atomic  = 1;
+                        _rd_data = minstret[31:0];
                     end
                     rv32::csr_addr_minstreth: begin
-                        rd_data = minstret[63:32];
+                        addr_is_atomic  = 1;
+                        _rd_data = minstret[63:32];
                     end
                     rv32::csr_addr_mcountinhibit: begin
-                        rd_data = mcountinhibit;
+                        addr_is_atomic  = 1;
+                        _rd_data = mcountinhibit;
                     end
                     rv32::csr_addr_mscratch: begin
-                        rd_data = mscratch;
+                        addr_is_atomic  = 0;
+                        _rd_data = mscratch;
                     end
                     rv32::csr_addr_mepc: begin
-                        rd_data = mepc;
+                        addr_is_atomic  = 1;
+                        _rd_data = mepc;
                     end
                     rv32::csr_addr_mcause: begin
-                        rd_data = mcause;
+                        addr_is_atomic  = 0;
+                        _rd_data = mcause;
                     end
                     rv32::csr_addr_mtval: begin
-                        rd_data = mtval;
+                        addr_is_atomic  = 0;
+                        _rd_data = mtval;
                     end
                     rv32::csr_addr_mconfigptr: begin
-                        rd_data = mconfigptr;
+                        addr_is_atomic  = 0;
+                        _rd_data = mconfigptr;
                     end
                     default: begin
-                        _illegal = 1;
+                        addr_is_atomic  = 0;
+                        _rd_data = 0;
+                        addr_is_illegal = 1;
                     end
                 endcase
             end // if(priv >= mmode)
-            // else omitted because it's covered by User-Mode default case
-            illegal_csr = (_illegal & (rd_en | wr_en));
+            // else omitted because it is covered by User-Mode default case
+            // Apply read enable and data bypass
+            rd_data = (wr_en && (rd_addr==wr_addr))
+                    ? wr_data
+                    : _rd_data;
         end
     end
     ////////////////////////////////////////////////////////////
@@ -409,9 +447,9 @@ module csr #(
                 end
             end
 
-            if (wr_en) begin
+            if (wr_en & !stall_exec & !bubble_exec) begin
                 // User-Mode CSRs
-                case (addr)
+                case (wr_addr)
                     rv32::csr_addr_cycle: begin
                         // read-only
                     end
@@ -436,7 +474,7 @@ module csr #(
                 endcase
                 // Machine-Mode CSRs
                 if (priv >= rv32::MMODE) begin
-                    case (addr)
+                    case (wr_addr)
                         rv32::csr_addr_misa: begin
                             // read-only
                         end

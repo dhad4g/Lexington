@@ -12,8 +12,8 @@ and *interrupt*.
   instruction in the current hart.
 - *interrupt*: an external event that occurs asynchronously to the current hart.
 
-This module uses combinatorial logic with the exception of an the
-`atomic_csr_pending`register.
+This module uses combinatorial logic with the exception of the
+`atomic_csr_pending` register.
 
 ## Ports
 
@@ -25,10 +25,10 @@ This module uses combinatorial logic with the exception of an the
 
 - **`clk`** core clock
 - **`rst_n`** active-low reset
-- **`jump`** asserted by Decode Stage when a jump or taken branch is encountered
-- **`jump_pc[XLEN-1:0]`** destination of jump or taken branch; only valid if `jump` is asserted
+- **`branch`** asserted by Decode Stage when a jump or taken branch is encountered
+- **`branch_addr[XLEN-1:0]`** destination of jump or taken branch; only valid if `branch` is asserted
 - **`trap_req`** asserted by Trap Unit when a trap is to occur
-- **`trap_pc[XLEN-1:0]`** destination of a trap; only valid if `trap_req` is asserted
+- **`trap_addr[XLEN-1:0]`** destination of a trap; only valid if `trap_req` is asserted
 - **`atomic_csr`** asserted by Decode Stage during an Atomic CSR write instruction
 - **`bubble_decode`** bubble status of Decode Stage (i.e. IF/ID bubble_o)
 - **`bubble_exec`** bubble status of Execute Stage (i.e. ID/EX bubble_o)
@@ -49,9 +49,9 @@ situations: (1) jump and branch taken, (2) traps, (3) Atomic CSR writes.
 
 ### Jump and Branch Taken
 
-If the `jump` signal from the Decode Stage is asserted, a bubble is inserted at
+If the `branch` signal from the Decode Stage is asserted, a bubble is inserted at
 IF/ID by asserting `bubble_fetch`. Additionally, `next_pc_en` is asserted and
-`next_pc` is set to `jump_pc`.
+`next_pc` is set to `branch_addr`.
 
 ### Trap Insertion
 
@@ -59,7 +59,7 @@ If the `trap_req` signal from the Trap Unit is asserted, the pipeline is flushed
 before continuing. Bubbles are inserted into the pipeline at the Fetch Stage by
 asserting `bubble_fetch`. Squashes are handles by the [Trap Unit](./Trap.md).
 Once both `bubble_decode` and `bubble_exec` are high, `trap_insert` is asserted,
-`next_pc_en` is asserted, and `next_pc` is set to `trap_pc`.
+`next_pc_en` is asserted, and `next_pc` is set to `trap_addr`.
 
 ### Atomic CSR Write
 
