@@ -42,8 +42,9 @@ module csr #(
 
         // Misc. Inputs
         input  logic atomic_csr_pending,                // asserted if atomic CSR write is in progress
-        input  logic stall_exec,                        // asserted if the Execute Stage is stalled
+        input  logic bubble_decode,                     // asserted if the Decode Stage has a bubble
         input  logic bubble_exec,                       // asserted if the Execute Stage has a bubble
+        input  logic stall_exec,                        // asserted if the Execute Stage is stalled
 
         // Misc. Outputs
         output logic endianness                         // effective data memory endianness
@@ -162,12 +163,12 @@ module csr #(
             else begin
                 case (priv)
                     rv32::MMODE: begin
-                        interrupts = (mstatus.MIE) ? (int_sources & mie) : 0;
+                        interrupts = (mstatus.MIE) ? (mip & mie) : 0;
                     end
                     // rv32::SMODE: begin
                     // end
                     default: begin // user mode
-                        interrupts = int_sources & mie;
+                        interrupts = mip & mie;
                     end
                 endcase
             end
@@ -182,15 +183,15 @@ module csr #(
     ////////////////////////////////////////////////////////////
     // BEGIN: Read-Only CSRs
     ////////////////////////////////////////////////////////////
-    assign misa = {2'b1, 4'b0, 1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,
-                // MXL    0     z    y    x    w    v    u    t    s    r
-                               1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,
+    assign misa = {2'b01, 4'h0, 1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,
+                //  MXL     0     z    y    x    w    v    u    t    s    r
+                               1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b1,
                 // extensions:   q    p    o    n    m    l    k    j    i
                                1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0};
                 // extensions:   h    g    f    e    d    c    b    a
     assign mvendorid = 32'h0;
     assign marchid = 32'h0;
-    assign mimpid = 32'h1;
+    assign mimpid = 32'h2;
     assign mhartid = HART_ID;
     // mstatus
     assign mstatus.reserved63_38 = 0;
@@ -214,6 +215,7 @@ module csr #(
     assign mstatus.reserved0 = 0;
     // mip
     assign mip.reserved15_12 = 0;
+    assign mip.reserved10 = 0;
     assign mip.reserved8 = 0;
     assign mip.reserved6 = 0;
     assign mip.reserved4 = 0;
@@ -227,6 +229,7 @@ module csr #(
     assign mip.SSI = 0;
     // mie
     assign mie.reserved15_12 = 0;
+    assign mie.reserved10 = 0;
     assign mie.reserved8 = 0;
     assign mie.reserved6 = 0;
     assign mie.reserved4 = 0;
@@ -255,38 +258,36 @@ module csr #(
             rd_data = 0;
         end
         else begin
-            logic addr_is_atomic;  // read enable not applied
-            logic _rd_data; // read data before bypass
             // default addr_is_illegal to 0
             addr_is_illegal = 0;
             // User-Mode CSRs
             case (rd_addr)
                 rv32::csr_addr_cycle: begin
                     addr_is_atomic  = 0;
-                    _rd_data = mcycle[31:0];
+                    rd_data = mcycle[31:0];
                 end
                 rv32::csr_addr_cycleh: begin
                     addr_is_atomic  = 0;
-                    _rd_data = mcycle[63:32];
+                    rd_data = mcycle[63:32];
                 end
                 rv32::csr_addr_instret: begin
                     addr_is_atomic  = 0;
-                    _rd_data = minstret[31:0];
+                    rd_data = minstret[31:0];
                 end
                 rv32::csr_addr_instreth: begin
                     addr_is_atomic  = 0;
-                    _rd_data = minstret[63:32];
+                    rd_data = minstret[63:32];
                 end
                 rv32::csr_addr_time: begin
                     addr_is_atomic  = 0;
-                    _rd_data = time_rd_data[31:0];
+                    rd_data = time_rd_data[31:0];
                 end
                 rv32::csr_addr_timeh: begin
                     addr_is_atomic  = 0;
-                    _rd_data = time_rd_data[63:32];
+                    rd_data = time_rd_data[63:32];
                 end
                 default: begin
-                    _rd_data = 0;
+                    rd_data = 0;
                     addr_is_illegal = 1;
                 end
             endcase
@@ -297,7 +298,7 @@ module csr #(
                     default: begin
                         addr_is_atomic  = 0;
                         addr_is_illegal = 1;
-                        _rd_data = 0;
+                        rd_data = 0;
                     end
                 endcase
             end // if (priv >= smode)
@@ -307,96 +308,92 @@ module csr #(
                 case (rd_addr)
                     rv32::csr_addr_misa: begin
                         addr_is_atomic  = 0;
-                        _rd_data = misa;
+                        rd_data = misa;
                     end
                     rv32::csr_addr_mvendorid: begin
                         addr_is_atomic  = 0;
-                        _rd_data = mvendorid;
+                        rd_data = mvendorid;
                     end
                     rv32::csr_addr_marchid: begin
                         addr_is_atomic  = 0;
-                        _rd_data = marchid;
+                        rd_data = marchid;
                     end
                     rv32::csr_addr_mimpid: begin
                         addr_is_atomic  = 0;
-                        _rd_data = mimpid;
+                        rd_data = mimpid;
                     end
                     rv32::csr_addr_mhartid: begin
                         addr_is_atomic  = 0;
-                        _rd_data = mhartid;
+                        rd_data = mhartid;
                     end
                     rv32::csr_addr_mstatus: begin
                         addr_is_atomic  = 1;
-                        _rd_data = mstatus[31:0];
+                        rd_data = mstatus[31:0];
                     end
                     rv32::csr_addr_mstatush: begin
                         addr_is_atomic  = 1;
-                        _rd_data = mstatus[63:32];
+                        rd_data = mstatus[63:32];
                     end
                     rv32::csr_addr_mtvec: begin
                         addr_is_atomic  = 1;
-                        _rd_data = mtvec;
+                        rd_data = mtvec;
                     end
                     rv32::csr_addr_mip: begin
                         addr_is_atomic  = 1;
-                        _rd_data = mip;
+                        rd_data = mip;
                     end
                     rv32::csr_addr_mie: begin
                         addr_is_atomic  = 1;
-                        _rd_data = mie;
+                        rd_data = mie;
                     end
                     rv32::csr_addr_mcycle: begin
                         addr_is_atomic  = 1;
-                        _rd_data = mcycle[31:0];
+                        rd_data = mcycle[31:0];
                     end
                     rv32::csr_addr_mcycleh: begin
                         addr_is_atomic  = 1;
-                        _rd_data = mcycle[63:32];
+                        rd_data = mcycle[63:32];
                     end
                     rv32::csr_addr_minstret: begin
                         addr_is_atomic  = 1;
-                        _rd_data = minstret[31:0];
+                        rd_data = minstret[31:0];
                     end
                     rv32::csr_addr_minstreth: begin
                         addr_is_atomic  = 1;
-                        _rd_data = minstret[63:32];
+                        rd_data = minstret[63:32];
                     end
                     rv32::csr_addr_mcountinhibit: begin
                         addr_is_atomic  = 1;
-                        _rd_data = mcountinhibit;
+                        rd_data = mcountinhibit;
                     end
                     rv32::csr_addr_mscratch: begin
                         addr_is_atomic  = 0;
-                        _rd_data = mscratch;
+                        rd_data = mscratch;
                     end
                     rv32::csr_addr_mepc: begin
                         addr_is_atomic  = 1;
-                        _rd_data = mepc;
+                        rd_data = mepc;
                     end
                     rv32::csr_addr_mcause: begin
                         addr_is_atomic  = 0;
-                        _rd_data = mcause;
+                        rd_data = mcause;
                     end
                     rv32::csr_addr_mtval: begin
                         addr_is_atomic  = 0;
-                        _rd_data = mtval;
+                        rd_data = mtval;
                     end
                     rv32::csr_addr_mconfigptr: begin
                         addr_is_atomic  = 0;
-                        _rd_data = mconfigptr;
+                        rd_data = mconfigptr;
                     end
                     default: begin
                         addr_is_atomic  = 0;
-                        _rd_data = 0;
+                        rd_data = 0;
                         addr_is_illegal = 1;
                     end
                 endcase
             end // if(priv >= mmode)
             // else omitted because it is covered by User-Mode default case
-            // Apply read enable and data bypass
-            rd_data = (wr_en && (rd_addr==wr_addr))
-                    ? wr_data
-                    : _rd_data;
         end
     end
     ////////////////////////////////////////////////////////////
@@ -434,6 +431,10 @@ module csr #(
             _interrupt_buff     <= 0;
         end
         else begin
+            logic _mip_wr;
+            rv32::word _mip_wr_data;
+            _mip_wr = 0;
+            _mip_wr_data = 0;
 
             // mcycle behavior, overwritten by CSR write instructions
             if (!mcountinhibit.CY) begin
@@ -492,7 +493,9 @@ module csr #(
                         end
                         rv32::csr_addr_mstatus: begin
                             mstatus.MPRV    <= wr_data[17];
-                            mstatus.MPP     <= rv32::priv_mode_t'(wr_data[12:11]);
+                            mstatus.MPP     <= (wr_data[12:11]==rv32::MMODE)
+                                                ? rv32::MMODE
+                                                : rv32::UMODE;
                             mstatus.MPIE    <= wr_data[7];
                             mstatus.UBE     <= wr_data[6];
                             mstatus.MIE     <= wr_data[3];
@@ -514,7 +517,8 @@ module csr #(
                             end
                         end
                         rv32::csr_addr_mip: begin
-                            mip[rv32::XLEN-1:16] <= wr_data[rv32::XLEN-1:16];
+                            _mip_wr = 1;
+                            _mip_wr_data = {wr_data[rv32::XLEN-1:16], 16'h0};
                         end
                         rv32::csr_addr_mie: begin
                             mie[rv32::XLEN-1:16] <= wr_data[rv32::XLEN-1:16];
@@ -558,17 +562,32 @@ module csr #(
             end // if(wr_en)
 
             // process interrupt sources
-            if (atomic_csr_pending & !bubble_exec) begin
+            if (atomic_csr_pending) begin
                 // interrupts are disabled, new interrupts are buffered
                 _interrupt_buff = int_sources[rv32::XLEN-1:16]; // use blocking assignment
-                if (!bubble_exec) begin
+                if (bubble_decode & !bubble_exec) begin
                     // write buffered interrupts
                     mip[rv32::XLEN-1:16] <= _interrupt_buff | mip[rv32::XLEN-1:16];
+                    for (int i=16; i<rv32::XLEN; i++) begin
+                        if (_mip_wr) begin
+                            mip[i] <= _mip_wr_data[i] | _interrupt_buff;
+                        end
+                        else begin
+                            mip[i] <= mip[i] | int_sources[i];
+                        end
+                    end
                 end
             end
             else begin
                 // normal interrupt behavior
-                mip[rv32::XLEN-1:16] <= int_sources[rv32::XLEN-1:16];
+                for (int i=16; i<rv32::XLEN; i++) begin
+                    if (_mip_wr) begin
+                        mip[i] <= _mip_wr_data[i] | int_sources[i];
+                    end
+                    else begin
+                        mip[i] <= mip[i] | int_sources[i];
+                    end
+                end
             end
 
             // trap behavior, overwrites CSR write instructions

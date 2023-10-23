@@ -73,7 +73,7 @@ inst_test:
     // test SRA
     __test_sra:
     li      x10, 0xFFFFFF00
-    sra     x10, x10, x7    // 0xFFFF_FF00 >>> 7 = 0xFFFF_FFFE 
+    sra     x10, x10, x7    // 0xFFFF_FF00 >>> 7 = 0xFFFF_FFFE
     li      x11, 0xFFFFFFFE
     call    check
     // test OR
@@ -293,7 +293,7 @@ inst_test:
     __test_misa:
     li      x10, 0xFFFFFFFF
     csrrw   x10, misa, x10
-    li      x11, 0x40000000     // expected value
+    li      x11, 0x40000100     // expected value
     call    check
     csrr    x10, misa
     call    check
@@ -317,7 +317,7 @@ inst_test:
     __test_mimpid:
     li      x10, 0xFFFFFFFF
     csrrw   x10, mimpid, x10
-    li      x11, 1              // expected value
+    li      x11, 2              // expected value
     call    check
     csrr    x10, mimpid
     call    check
@@ -335,7 +335,7 @@ inst_test:
     csrw    mstatus, x10
     csrw    mstatush, x10
     csrr    x10, mstatus
-    li      x11, 0x18AA         // MPP, MPIE, SPIE, MIE, & SIE bits set
+    li      x11, 0x000218EA     // MPRV, MPP, MPIE, UBE, SPIE, MIE, SIE bits set
     call    check
     csrr    x10, mstatush
     li      x11, 0x20           // MBE bit set
@@ -344,7 +344,7 @@ inst_test:
     csrw    mstatus, 0
     csrw    mstatush, 0
     csrr    x10, mstatus
-    li      x11, 0x1822         // MPP, SPIE, & SIE bits set
+    li      x11, 0x22           // SPIE & SIE bits set
     call    check
     csrr    x10, mstatush
     li      x11, 0              // no bits set
@@ -366,15 +366,15 @@ inst_test:
     __test_mcycle_set:
     csrw    mcycle, 0
     csrr    x10, mcycle
-    li      x11, 0
+    li      x11, 1              // Fetch Stage adds 1 cycle before CSR read
     call    check
     __test_mcycle_inc:
-    csrr    x10, mcycle
+    csrr    x10, mcycle         // read does not flush pipeline
     nop
     nop
     nop
     csrr    x11, mcycle
-    addi    x11, x11, -4
+    addi    x11, x11, -4        // No extra cycle because only CSR read
     call    check
     __test_mcycle_overflow:
     li      x10, -1
@@ -391,15 +391,15 @@ inst_test:
     li      x11, 2
     call    check
     __test_cycle:
-    csrw    mcycle, 0
+    csrw    mcycle, 0           // Pipeline flush adds 1 cycle between write and read
     csrr    x10, cycle
-    li      x11, 0
+    li      x11, 1
     call    check
-    csrw    mcycle, 0
+    csrw    mcycle, 0           // +1 cycle after write
     nop
     nop
     csrr    x10, cycle
-    li      x11, 2
+    li      x11, 3
     call    check
     __end_test_mcycle:
     lw      x10, 0(sp)
@@ -413,21 +413,22 @@ inst_test:
     csrw    mtvec, x12
     li      x12, 12
     __test_mip_rw:
-    li      x10, 0x0000FFFF
     csrr    x12, mip            // save value
-    and     x10, x10, x12       // get bits 15:0
-    li      x11, 0xFFAA0000
-    or      x10, x10, x11       // build expected value
-    li      x11, 0xFFAA55FF
-    csrw    mip, x11
-    csrr    x11, mip
+    li      x11, 0x0000FFFF
+    and     x11, x11, x12       // get bits 15:0
+    li      x10, 0xFFAA0000
+    or      x11, x11, x10       // build expected value
+    li      x10, 0xFFAA55FF
+    csrw    mip, x10
+    csrr    x10, mip
     call    check
     csrw    mip, x12            // restore value
     li      x12, 12
     __test_mie_rw:
-    li      x11, 0xFFAA55FF
-    csrrw   x12, mie, x11       // save value, write new value
+    li      x10, 0xFFAA55FF
+    csrrw   x12, mie, x10       // save value, write new value
     csrr    x10, mie
+    li      x11, 0xFFAA0080     // only MTIE is writable in 15:0
     call    check
     mv      x11, x0
     csrw    mie, 0
@@ -550,10 +551,6 @@ inst_test:
     auipc   x11, 0
     csrr    x10, mepc
     call    check
-    // check mtval
-    addi    x11, x11, -4
-    csrr    x10, mtval
-    call    check
     // check mcause
     li      x11, 3
     csrr    x10, mcause
@@ -652,6 +649,9 @@ inst_test:
     la      x10, trap_vector_table
     csrw    mtvec, x10          // set trap vector table
     csrs    mtvec, 1            // enable vectored mode
+    csrw    mip, x0             // clear pending interrupts
+    csrw    mie, x0             // disable all interrupts
+    csrsi   mstatus, 0x8        // enable global machine-mode interrupts
     // check mepc
     li      x11, 1
     sll     x11, x11, 18        // tim0 interrupt bit
@@ -659,6 +659,7 @@ inst_test:
     csrw    mip, x11            // trigger tim0 interrupt
     nop
     auipc   x11, 0
+    addi    x11, x11, -4
     csrr    x10, mepc
     call    check
     // check mtval
@@ -669,6 +670,13 @@ inst_test:
     li      x11, 0x80000000     // mcause interrupt bit
     or      x11, x11, 18        // tim0 interrupt
     csrr    x10, mcause
+    call    check
+
+    // Test User Mode
+    __test_umode:
+    // (not yet implemented)
+    li      x10, 0xBAAAAAAD
+    li      x11, 0xF000000D
     call    check
 
     // FENCE, MRET, and WFI are not explicitly tested
@@ -692,6 +700,7 @@ inst_test:
 // Check values function
 check: // void check(int test_value, int correct_value)
     csrw    mscratch, 0
+    nop
     fence
     ret
 
@@ -700,6 +709,7 @@ check: // void check(int test_value, int correct_value)
 done:
     li      x10, 0x0D15EA5E
     csrw    mscratch, x10
+    nop
     fence
     __dead_loop:
     j       __dead_loop

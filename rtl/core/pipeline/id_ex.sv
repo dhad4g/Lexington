@@ -9,8 +9,9 @@ module id_ex (
         input  logic clk,
         input  logic rst_n,
 
-        input  logic stall_exec,
+        input  logic stall_decode,
         input  logic squash_decode,
+        input  logic stall_exec,
 
         input  logic bubble_i,
         input  rv32::word pc_i,
@@ -46,7 +47,7 @@ module id_ex (
             lsu_op_o        <= LSU_NOP;
         end
         else begin
-            if (bubble_i) begin
+            if (bubble_i | (stall_decode & !stall_exec)) begin
                 bubble_o        <= 1;
                 pc_o            <= 0;
                 src1_o          <= 0;

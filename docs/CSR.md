@@ -429,7 +429,6 @@ Table 8.
 **Table 8.** `mtval` encoding
 | Exception | Value |
 | --- | --- |
-| breakpoint    | faulting address |
 | misaligned    | faulting address |
 | access-fault  | faulting address |
 | illegal inst  | faulting instruction |

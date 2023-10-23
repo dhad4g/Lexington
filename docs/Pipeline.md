@@ -46,6 +46,13 @@ To avoid all data hazards, both General Purpose Registers (GPR) and Control and
 Status Registers (CSR) support writing and reading to the same destination in
 the same cycle. The value read will be the same as the value written.
 
+General Purpose Registers (GPR) supports writing and reading to the same destination
+in the same cycle. The value read will be the same ase the value written.
+
+Control and Status Registers (CSR) do not support this behavior, thus the Decode
+Stage stalls for one cycle when a CSR write is immediately followed by a CSR
+read (including implicit reads) to the same address.
+
 ## Control Hazards
 
 There are several groups of instructions that cause control hazards within the

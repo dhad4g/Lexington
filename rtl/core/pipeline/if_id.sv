@@ -6,6 +6,7 @@ module if_id (
         input  logic clk,
         input  logic rst_n,
 
+        input  logic stall_fetch,
         input  logic stall_decode,
 
         input  logic bubble_i,
@@ -17,7 +18,7 @@ module if_id (
         output rv32::word inst_o
     );
 
-    // Stall inst
+    // Stall instruction
     logic _stall;
     always_ff @(posedge clk) begin
         if (!rst_n) begin
@@ -31,7 +32,7 @@ module if_id (
         if (!rst_n) begin
             inst_o <= 0;
         end
-        else if (!stall_decode & !_stall) begin
+        else if (!_stall) begin
             inst_o <= inst_i;
         end
     end

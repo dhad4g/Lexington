@@ -123,7 +123,7 @@ module decoder (
     assign funct12      = inst[31:20];
     assign csr_addr     = inst[31:20];  // output port
 
-    assign inst_misaligned = (|branch_addr[1:0]);
+    assign inst_misaligned = (|branch_addr[1:0]) & branch;
 
     // Internal signed variants
     rv32::signed_word _src1;

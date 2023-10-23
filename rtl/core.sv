@@ -89,7 +89,7 @@ module core #(
     rv32::word dbus_rd_data;
     rv32::word dbus_wr_data;
     logic [(rv32::XLEN/8)-1:0] dbus_wr_strobe;
-    logic stall;  // dbus_wait
+    logic dbus_wait;
     logic dbus_err;
     // Trap
     rv32::word interrupts;      // interrupts pending with masks
@@ -103,6 +103,7 @@ module core #(
     logic load_store_n;
     // Control
     logic branch;
+    logic control_stall_decode;
     logic trap_insert;
     logic atomic_csr;
     logic atomic_csr_pending;
@@ -116,18 +117,20 @@ module core #(
     rv32::word next_pc;
     // Fetch Stage
     logic bubble_fetch;
+    logic stall_fetch;
     // Decode Stage
     logic bubble_decode;
+    logic stall_decode;
     logic squash_decode;
     rv32::word decode_src1;
     rv32::word decode_src2;
     rv32::word decode_alt_data;
-    rv32::csr_addr_t decode_csr_addr;
     rv32::gpr_addr_t decode_dest;
     alu_op_t decode_alu_op;
     lsu_op_t decode_lsu_op;
     // Execute Stage
     logic bubble_exec;
+    logic stall_exec;
     logic squash_exec;
     rv32::word exec_src1;
     rv32::word exec_src2;
@@ -178,6 +181,12 @@ module core #(
     ////////////////////////////////////////////////////////////
     // END: Internal Wires
     ////////////////////////////////////////////////////////////
+
+
+    // Stall logic
+    assign stall_fetch  = stall_decode;
+    assign stall_decode = control_stall_decode | stall_exec;
+    assign stall_exec   = dbus_wait;
 
 
 
@@ -239,7 +248,7 @@ module core #(
         .data_misaligned,
         .data_access_fault,
         .load_store_n,
-        .dbus_wait(stall),
+        .dbus_wait,
         .dbus_err
     );
     ////////////////////////////////////////////////////////////
@@ -256,7 +265,8 @@ module core #(
     if_id IF_ID (
         .clk,
         .rst_n,
-        .stall_decode(stall),
+        .stall_fetch,
+        .stall_decode,
         .bubble_i(bubble_fetch),
         .inst_i(ibus_rd_data),
         .pc_i(fetch_pc),
@@ -267,8 +277,9 @@ module core #(
     id_ex ID_EX (
         .clk,
         .rst_n,
-        .stall_exec(stall),
+        .stall_decode,
         .squash_decode,
+        .stall_exec,
         .bubble_i(bubble_decode),
         .pc_i(decode_pc),
         .src1_i(decode_src1),
@@ -338,8 +349,9 @@ module core #(
         .int_sources,
         .interrupts,
         .atomic_csr_pending,
-        .stall_exec(stall),
+        .bubble_decode,
         .bubble_exec,
+        .stall_exec,
         .endianness
     );
     ////////////////////////////////////////////////////////////
@@ -361,12 +373,17 @@ module core #(
         .branch_addr,
         .trap_req,
         .trap_addr,
+        .csr_rd_en,
+        .decode_csr_addr(csr_rd_addr),
+        .exec_csr_addr(csr_wr_addr),
         .atomic_csr,
         .bubble_decode,
+        .squash_decode,
         .bubble_exec,
         .next_pc_en,
         .next_pc,
         .bubble_fetch,
+        .stall_decode(control_stall_decode),
         .trap_insert,
         .atomic_csr_pending
     );
@@ -421,7 +438,8 @@ module core #(
     ) PC (
         .clk,
         .rst_n,
-        .stall_fetch(stall),
+        .bubble_fetch,
+        .stall_fetch,
         .next_pc_en,
         .next_pc,
         .pc(fetch_pc)
@@ -492,7 +510,7 @@ module core #(
         .alt_data(exec_alt_data),
         .endianness,
         .bubble(bubble_exec),
-        .stall,
+        .stall(stall_exec),
         .dest_en,
         .dest_addr,
         .dest_data,

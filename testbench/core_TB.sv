@@ -173,7 +173,7 @@ module core_TB;
 
         // Reset
         rst = 1;
-        #200;
+        #255;
         rst = 0;
     end
 

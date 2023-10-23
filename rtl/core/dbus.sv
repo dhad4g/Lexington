@@ -80,30 +80,36 @@ module dbus #(
 
     // Set data_misaligned, load_store_n, axi_wait, and dbus_wait
     logic axi_wait, ram_wait;
-    assign data_misaligned  = (rd_en | wr_en) & ((addr[rv32::ADDR_BITS_IN_WORD-1:0]));
+    assign data_misaligned  = (rd_en | wr_en) & (|(addr[rv32::ADDR_BITS_IN_WORD-1:0]));
     assign load_store_n     = rd_en;
     assign axi_wait         = ((rd_en | wr_en) && is_axi_addr) ? axi_busy : 0;
-    assign dbus_wait        = ram_wait | axi_wait;
+    assign dbus_wait        = (ram_wait | axi_wait) & !(data_misaligned | data_access_fault);
     assign dbus_err         = data_misaligned | data_access_fault;
 
     // Pass through wr_data and wr_strobe
     assign wr_data_o = wr_data_i;
     assign wr_strobe_o = wr_strobe_i;
 
-    // RAM and ROM read takes 2 cycles
-    logic ram_done;
-    assign ram_wait = rd_en & (is_ram_addr | is_rom_addr) & !ram_done;
+    // RAM and ROM read takes 3 cycles
+    integer rd_latency;
+    assign ram_wait = rd_en & (is_ram_addr | is_rom_addr) & (rd_latency!=0);
     always_ff @(posedge clk) begin
         if (!rst_n) begin
-            ram_done <= 0;
+            rd_latency <= 3-1;
         end
         else begin
-            if (ram_done) begin
-                ram_done <= 0;
+            if (!rd_latency) begin
+                rd_latency <= 3-1;
             end
-            else begin
-                ram_done <= rd_en & (is_ram_addr | is_rom_addr);
+            else if (rd_en & (is_ram_addr | is_rom_addr)) begin
+                rd_latency--;
             end
+            // if (ram_done) begin
+            //     ram_done <= 0;
+            // end
+            // else begin
+            //     ram_done <= rd_en & (is_ram_addr | is_rom_addr);
+            // end
         end
     end
 

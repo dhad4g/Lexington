@@ -27,6 +27,7 @@ module regfile (
 
     // Read behavior (implement data bypass)
     always_comb begin
+        // rs1
         if (rs1_en && (|rs1_addr)) begin
             rs1_data = (dest_en && (rs1_addr==dest_addr))
                     ? dest_data
@@ -35,6 +36,7 @@ module regfile (
         else begin
             rs1_data = 0;
         end
+        // rs2
         if (rs2_en && (|rs2_addr)) begin
             rs2_data = (dest_en && (rs2_addr==dest_addr))
                     ? dest_data

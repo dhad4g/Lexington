@@ -110,7 +110,7 @@ module trap (
                                     : rv32::TRAP_CODE_STORE_MISALIGNED;
             _val = data_addr;
         end
-        if (data_access_fault & !bubble_exec) begin
+        else if (data_access_fault & !bubble_exec) begin
             _exception = 1;
             _except_stage = 2;
             _except_cause = (load_store_n) ? rv32::TRAP_CODE_LOAD_ACCESS_FAULT
@@ -129,8 +129,7 @@ module trap (
     // Interrupt cause decode function
     always_comb begin
         rv32::word msb_mask;
-        msb_mask = ~0;
-        msb_mask = ~( msb_mask >> rv32::XLEN-1 );
+        msb_mask = (~0) << (rv32::XLEN-1);
         if (!rst_n) begin
             _int_cause = 0;
         end
@@ -153,7 +152,7 @@ module trap (
         end
         else begin
             if (!_trap_req) begin
-                _trap_req <= _trap;
+                _trap_req <= _trap & !trap_insert;
             end
             else if (trap_insert) begin
                 _trap_req <= 0;
@@ -176,7 +175,7 @@ module trap (
                 trap_cause  <= _except_cause;
                 trap_val    <= _val;
             end
-            else if (_interrupt & !_trap_req) begin
+            else if (_interrupt) begin
                 trap_is_mret<= 0;
                 trap_epc    <= fetch_pc;
                 trap_cause  <= _int_cause;
@@ -188,11 +187,12 @@ module trap (
     // Combinatorial output data
     always_comb begin
         if (!rst_n) begin
-            trap_addr         = 0;
+            trap_addr       = 0;
             squash_decode   = 0;
             squash_exec     = 0;
         end
         else begin
+
             // Squashes
             if (_exception) begin
                 squash_decode   = (_except_stage >= DECODE_STAGE_ID);
@@ -202,19 +202,20 @@ module trap (
                 squash_decode   = 0;
                 squash_exec     = 0;
             end
+
             // Trap destination PC
             if (trap_is_mret) begin
                 // Trap return
                 trap_addr = mepc;
             end
-            if (trap_cause[rv32::XLEN-1]) begin
+            else if (trap_cause[rv32::XLEN-1]) begin
                 // interrupt
                 if (mtvec[1:0] == 2'b01) begin
                     // vectored
                     localparam _msb = rv32::XLEN-1;
                     localparam _lsb = MTVEC_ADDR_BIT_ALIGN;
                     trap_addr[_msb:_lsb] = mtvec[_msb:_lsb];
-                    trap_addr[_lsb-1:0]  = 0;
+                    trap_addr[_lsb-1:0]  = trap_cause[_lsb-3:0] << 2;
                 end
                 else begin
                     // direct
@@ -225,6 +226,7 @@ module trap (
                 // exception
                 trap_addr = {mtvec[rv32::XLEN-1:2], 2'b00};
             end
+
         end
     end
 
