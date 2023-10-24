@@ -602,6 +602,7 @@ module csr #(
                     end
                 end
                 else begin
+                    priv            <= rv32::MMODE;
                     mstatus.MPIE    <= mstatus.MIE;
                     mstatus.MIE     <= 0;
                     mstatus.MPP     <= priv;

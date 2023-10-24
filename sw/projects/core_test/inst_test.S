@@ -645,21 +645,22 @@ inst_test:
     addi    sp, sp, 4
 
     // Simple interrupt test
-    __test_interrupt:
+    __test_interrupt_begin:
     la      x10, trap_vector_table
     csrw    mtvec, x10          // set trap vector table
     csrs    mtvec, 1            // enable vectored mode
     csrw    mip, x0             // clear pending interrupts
     csrw    mie, x0             // disable all interrupts
     csrsi   mstatus, 0x8        // enable global machine-mode interrupts
-    // check mepc
+    __test_interrupt_31:
     li      x11, 1
-    sll     x11, x11, 18        // tim0 interrupt bit
-    csrw    mie, x11
-    csrw    mip, x11            // trigger tim0 interrupt
+    sll     x11, x11, 31        // unused interrupt source
+    csrw    mie, x11            // enable interrupt
+    csrw    mip, x11            // trigger interrupt
     nop
     auipc   x11, 0
     addi    x11, x11, -4
+    // check mepc
     csrr    x10, mepc
     call    check
     // check mtval
@@ -668,18 +669,34 @@ inst_test:
     call    check
     // check mcause
     li      x11, 0x80000000     // mcause interrupt bit
-    or      x11, x11, 18        // tim0 interrupt
+    or      x11, x11, 31        // interrupt cause
     csrr    x10, mcause
     call    check
+    __test_interrupt_end:
+    csrw    mie, x0             // disable all interrupts
+    csrci   mstatus, 0x8        // disable global machine-mode interrupts
+
 
     // Test User Mode
-    __test_umode:
-    // (not yet implemented)
-    li      x10, 0xBAAAAAAD
-    li      x11, 0xF000000D
-    call    check
+    __test_umode_begin:
+    la      x10, umode_handler
+    csrw    mtvec, x10          // set trap handler
+    la      x10, __test_umode_csr
+    csrw    mepc, x10           // umode function address
+    li      x11, 0x00001800     // MPP mask for mstatus
+    csrc    mstatus, x11        // set previous privilege to umode
+    mret                        // enter user mode
+    __test_umode_csr:
+    li      x11, -1
+    mv      x10, x11
+    csrr    x10, mstatus        // unprivileged access
+    call    check               // x10 should be unchanged
+    __test_umode_end:
+    ecall                       // return to machine mode
+
 
     // FENCE, MRET, and WFI are not explicitly tested
+
 
     __test_done:
     // finally test that all registers are correct (except x1, x2, x10, & x11)
@@ -784,6 +801,33 @@ exception_isr: // sets x10 to mepc, trap-return to mepc+4
     mret
 test_ex_isr_inst_access_fault: // sets x10 to mepc, trap-return to x10 argument
     csrrw   x10, mepc, x10
+    mret
+
+
+// User Mode tests trap handler
+umode_handler:
+    addi    sp, sp, -8
+    sw      x10, 0(sp)
+    sw      x11, 4(sp)
+    csrr    x10, mcause
+    blt     x10, x0, umode_isr
+    li      x11, 8              // ECALL from umode trap code
+    beq     x10, x11, ecall_from_umode_handler
+umode_ex_handler:
+    csrr    x10, mepc           // return to next instruction
+    addi    x10, x10, 4
+    csrw    mepc, x10
+    j       umode_handler_exit
+umode_isr:
+    j       umode_handler_exit
+ecall_from_umode_handler:
+    li      x10, 0x00001800     // MPP mask for mstatus
+    csrs    mstatus, x10        // set previous privilege to mmode
+    j       umode_handler_exit
+umode_handler_exit:
+    lw      x10, 0(sp)
+    lw      x11, 4(sp)
+    addi    sp, sp, 8
     mret
 
 

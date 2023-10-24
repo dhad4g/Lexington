@@ -226,9 +226,9 @@ module core_TB;
                     end
                     default: begin
                         $write("clk_count=%5d    ", clk_count);
-                        $write("error, unknown ebreak call, mscratch = 0x%h\n", DUT.CSR.mscratch);
+                        $write("error, unknown sim call, mscratch = 0x%h\n", DUT.CSR.mscratch);
                         $fwrite(fid,"clk_count=%5d    ", clk_count);
-                        $fwrite(fid,"error, unknown ebreak call, mscratch = 0x%h\n", DUT.CSR.mscratch);
+                        $fwrite(fid,"error, unknown sim call, mscratch = 0x%h\n", DUT.CSR.mscratch);
                     end
                 endcase
             end
