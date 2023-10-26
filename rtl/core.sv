@@ -93,7 +93,7 @@ module core #(
     rv32::word rs1_data;
     rv32::word rs2_data;
     rv32::word dest_data;
-// Decode/ALU/LSU
+    // Decode/ALU/LSU
     rv32::word src1;
     rv32::word src2;
     rv32::word alt_data;
@@ -102,6 +102,7 @@ module core #(
     lsu_op_t lsu_op;
     logic alu_zero;
     // CSR
+    rv32::priv_mode_t priv;
     logic csr_rd_en;
     logic csr_explicit_rd;
     logic csr_wr_en;
@@ -166,8 +167,6 @@ module core #(
         .MTIME_BASE_ADDR(MTIME_BASE_ADDR),
         .AXI_BASE_ADDR(AXI_BASE_ADDR)
     ) DBUS (
-        .clk,
-        .rst_n,
         .rd_en(dbus_rd_en),
         .wr_en(dbus_wr_en),
         .addr(dbus_addr),
@@ -242,7 +241,7 @@ module core #(
     // BEGIN: Fetch/Decoder/ALU/LSU Instantiations
     ////////////////////////////////////////////////////////////
     fetch Fetch_inst (
-            .pc,
+        .pc,
         .ibus_rd_en,
         .ibus_addr,
         .ibus_rd_data,
@@ -333,7 +332,8 @@ module core #(
         .illegal_csr,
         .dbus_wait,
         .mret,
-        .trap
+        .trap,
+        .priv
     );
     ////////////////////////////////////////////////////////////
     // END: CSR Instantiation
@@ -372,7 +372,7 @@ module core #(
         .data_access_fault,
         .load_store_n,
         .data_addr(alu_result),
-        .mtime_int,
+        .mtime_interrupt,
         .gpioa_int_0,
         .gpioa_int_1,
         .gpiob_int_0,
@@ -386,7 +386,8 @@ module core #(
         .next_pc,
         .csr_rd_data(trap_rd_data),
         .exception,
-        .trap
+        .trap,
+        .priv
     );
     ////////////////////////////////////////////////////////////
     // END: Trap Unit Instantiation
@@ -409,6 +410,7 @@ module core #(
         .wr_data,
         .wr_strobe,
         .rd_data(mtime_rd_data),
+        .time_rd_data,
         .interrupt(mtime_interrupt)
     );
     ////////////////////////////////////////////////////////////

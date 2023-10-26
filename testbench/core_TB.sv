@@ -119,7 +119,6 @@ module core_TB;
     rom #(
         .ADDR_WIDTH(ROM_ADDR_WIDTH)
     ) ROM0 (
-        .clk,
         .rd_en1(rom_rd_en1),
         .addr1(rom_addr1),
         .rd_data1(rom_rd_data1),
@@ -184,33 +183,33 @@ module core_TB;
 
         end
         else begin
-            if (DUT.Decoder_inst.opcode == DUT.Decoder_inst.MISC_MEM
-            && DUT.Decoder_inst.funct3 == DUT.Decoder_inst.FUNCT3_FENCE) begin
+            if (DUT.DECODER.opcode == DUT.DECODER.MISC_MEM
+                && DUT.DECODER.funct3 == DUT.DECODER.FUNCT3_FENCE) begin
                 // FENCE instruction triggers simulation check function
-                case (DUT.gen_csr.CSR_inst.mscratch)
+                case (DUT.CSR.mscratch)
                     0: begin // confirm x10 == x11
                         $write("clk_count=%5d    ", clk_count);
                         $fwrite(fid,"clk_count=%5d    ", clk_count);
-                        if (DUT.RegFile_inst.data[10] == DUT.RegFile_inst.data[11]) begin
-                            $write("check passed, called from 0x%h\n", DUT.RegFile_inst.data[1]-4);
-                            $fwrite(fid,"check passed, called from 0x%h\n", DUT.RegFile_inst.data[1]-4);
+                        if (DUT.REGFILE.data[10] == DUT.REGFILE.data[11]) begin
+                            $write("check passed, called from 0x%h\n", DUT.REGFILE.data[1]-4);
+                            $fwrite(fid,"check passed, called from 0x%h\n", DUT.REGFILE.data[1]-4);
                         end
                         else begin
                             fail <= fail + 1;
-                            $write("check FAILED, called from 0x%h", DUT.RegFile_inst.data[1]-4);
-                            $write("    0x%h != 0x%h\n", DUT.RegFile_inst.data[10], DUT.RegFile_inst.data[11]);
-                            $fwrite(fid,"check FAILED, called from 0x%h", DUT.RegFile_inst.data[1]-4);
-                            $fwrite(fid,"    0x%h != 0x%h\n", DUT.RegFile_inst.data[10], DUT.RegFile_inst.data[11]);
+                            $write("check FAILED, called from 0x%h", DUT.REGFILE.data[1]-4);
+                            $write("    0x%h != 0x%h\n", DUT.REGFILE.data[10], DUT.REGFILE.data[11]);
+                            $fwrite(fid,"check FAILED, called from 0x%h", DUT.REGFILE.data[1]-4);
+                            $fwrite(fid,"    0x%h != 0x%h\n", DUT.REGFILE.data[10], DUT.REGFILE.data[11]);
                         end
                     end
                     1: begin // check all failed
                         fail <= fail + 1;
                         $write("clk_count=%5d    ", clk_count);
-                        $write("check_all FAILED, called from 0x%h", DUT.RegFile_inst.data[1]-4);
-                        $write("    register 0x%2d incorrect\n", DUT.RegFile_inst.data[10]);
+                        $write("check_all FAILED, called from 0x%h", DUT.REGFILE.data[1]-4);
+                        $write("    register 0x%2d incorrect\n", DUT.REGFILE.data[10]);
                         $fwrite(fid,"clk_count=%5d    ", clk_count);
-                        $fwrite(fid,"check_all FAILED, called from 0x%h", DUT.RegFile_inst.data[1]-4);
-                        $fwrite(fid,"    register 0x%2d incorrect\n", DUT.RegFile_inst.data[10]);
+                        $fwrite(fid,"check_all FAILED, called from 0x%h", DUT.REGFILE.data[1]-4);
+                        $fwrite(fid,"    register 0x%2d incorrect\n", DUT.REGFILE.data[10]);
                     end
                     DONE_CODE: begin
                         $write("Reached done state");
@@ -226,9 +225,9 @@ module core_TB;
                     end
                     default: begin
                         $write("clk_count=%5d    ", clk_count);
-                        $write("error, unknown ebreak call, mscratch = 0x%h\n", DUT.gen_csr.CSR_inst.mscratch);
+                        $write("error, unknown sim call, mscratch = 0x%h\n", DUT.CSR.mscratch);
                         $fwrite(fid,"clk_count=%5d    ", clk_count);
-                        $fwrite(fid,"error, unknown ebreak call, mscratch = 0x%h\n", DUT.gen_csr.CSR_inst.mscratch);
+                        $fwrite(fid,"error, unknown sim call, mscratch = 0x%h\n", DUT.CSR.mscratch);
                     end
                 endcase
             end
@@ -244,7 +243,7 @@ module core_TB;
                 $write("\n\nFAILED %3d tests\n", fail);
                 $fwrite(fid,"\n\nFailed %3d tests\n", fail);
             end
-            else if (DUT.gen_csr.CSR_inst.mscratch != DONE_CODE) begin
+            else if (DUT.CSR.mscratch != DONE_CODE) begin
                 $write("\n\nFAILED, never reached done state\n");
                 $fwrite(fid,"\n\nFAILED, never reached done state\n");
             end

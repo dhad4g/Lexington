@@ -428,6 +428,7 @@ inst_test:
     li      x11, 0xFFAA55FF
     csrrw   x12, mie, x11       // save value, write new value
     csrr    x10, mie
+    li      x11, 0xFFAA0080     // only MTIE is writable in 15:0
     call    check
     mv      x11, x0
     csrw    mie, 0
