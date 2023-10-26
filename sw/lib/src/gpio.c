@@ -3,13 +3,11 @@
 
 void gpio_mode(gpio_t* bank, uint32_t pin, uint32_t mode) {
     uint32_t mask = (mode ? 0b1U : 0b0U) << pin;
-    uint32_t x = bank->MODE;
     if (mode) {
-        x |= mask;
+        bank->MODE = mask | bank->MODE;
     } else {
-        x &= ~mask;
+        bank->MODE = (~mask) & bank->MODE;
     }
-    bank->MODE = x;
 }
 
 uint32_t gpio_read(gpio_t* bank, uint32_t pin) {
@@ -20,11 +18,9 @@ uint32_t gpio_read(gpio_t* bank, uint32_t pin) {
 
 void gpio_write(gpio_t* bank, uint32_t pin, uint32_t state) {
     uint32_t mask = (state ? 0b1U : 0b0U) << pin;
-    uint32_t x = bank->ODATA;
     if (state) {
-        x |= mask;
+        bank->MODE = mask | bank->MODE;
     } else {
-        x &= mask;
+        bank->MODE = (~mask) & bank->MODE;
     }
-    bank->ODATA = x;
 }

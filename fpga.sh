@@ -6,7 +6,7 @@ RTL_SRC_DIR="${PROJ_DIR}/rtl"
 INC_DIR="${PROJ_DIR}/rtl"
 SW_PROJ_DIR="${PROJ_DIR}/sw/projects"
 
-VIVADO_OPTS="-mode batch"
+VIVADO_OPTS="-mode tcl"
 
 # Include common functions and definitions such as OUT_FILTER and special_exec()
 source "${PROJ_DIR}/scripts/utils.sh"
@@ -20,6 +20,7 @@ usage: $SCRIPT_NAME [option]... <sw proj name>
     <sw proj name>      Name of software project (ex: blink)
 
     -v, --verbose       Disable message limits
+        --debug         Add debug core
     -h, --help          Prints this usage message
 
 USAGE_EOF
@@ -36,6 +37,7 @@ fi
 # Parse args
 proj=""
 verbose=""
+debug=""
 while [[ $# -gt 0 ]]; do
    case "$1" in
         -h | --help)
@@ -45,6 +47,11 @@ while [[ $# -gt 0 ]]; do
         -v | --verbose)
             verbose="-v"
             echo "Verbose output enabled. Message limit increased to 1000."
+            shift
+            ;;
+        --debug)
+            debug="-debug"
+            echo "Debug core enable"
             shift
             ;;
         -* | --*)
@@ -77,6 +84,12 @@ cd "${PROJ_DIR}/build/implement"
 
 # Compile software
 bash -c "cd ${SW_PROJ_DIR}/$proj && make build dump" | $OUT_FORMAT
+rval=$PIPESTATUS
+if [ "$rval" != "0" ];then
+    >&2 echo -e "${RED}FAIL: Software project compilation failed with exit code $rval"
+    >&2 echo
+    exit $rval
+fi
 cp "${SW_PROJ_DIR}/$proj/rom.hex" .
 
 # Execute macro commands
@@ -93,5 +106,5 @@ echo
 cp "${PROJ_DIR}/scripts/Basys3.xdc" .
 
 # Implement
-TCL_ARGS="$verbose -i $INC_DIR $sv_files"
-special_exec vivado $VIVADO_OPTS -source "${PROJ_DIR}/scripts/build.tcl" -tclargs "$TCL_ARGS" | $OUT_FORMAT
+TCL_ARGS="$verbose $debug -i $INC_DIR $sv_files"
+special_exec vivado $VIVADO_OPTS -source "${PROJ_DIR}/scripts/build.tcl" -tclargs "$TCL_ARGS" 2>&1 | $OUT_FORMAT

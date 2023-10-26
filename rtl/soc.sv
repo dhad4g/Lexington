@@ -1,10 +1,10 @@
 //depend core.sv
 //depend core/*.sv
-//depend mem/rom.sv
-//depend mem/ram.sv
+//depend debug.sv
+//depend mem/*.sv
 //depend axi4_lite_manager.sv
 //depend axi4_lite_crossbar.sv
-//depend peripheral/gpio.sv
+//depend peripheral/*.sv
 `timescale 1ns/1ps
 
 `include "rv32.sv"
@@ -13,15 +13,18 @@
 import lexington::*;
 
 
-module lexington_soc #(
-        parameter CLK_PERIOD    = DEFAULT_CLK_PERIOD    // system clock period in ns
+module soc #(
+        parameter UART0_BAUD            = DEFAULT_UART_BAUD,            // UART BAUD rate
+        parameter UART0_FIFO_DEPTH      = DEFAULT_UART_FIFO_DEPTH       // FIFO depth for both TX and RX (depth 0 is invalid)
     ) (
         input  logic clk,                       // system clock
-        input  logic rst_n,                     // reset signal (active-high)
+        input  logic rst_n,                     // reset signal (active-low)
 
         inout  logic [15:0] gpioa,
         inout  logic [15:0] gpiob,
-        inout  logic [15:0] gpioc
+        inout  logic [15:0] gpioc,
+        input  logic uart0_rx,
+        output logic uart0_tx
     );
 
     // Core Parameters
@@ -35,10 +38,6 @@ module lexington_soc #(
     localparam AXI_TIMEOUT          = DEFAULT_AXI_TIMEOUT;          // AXI bus timeout in cycles
     localparam HART_ID              = 0;                            // hardware thread id (see mhartid CSR)
     localparam RESET_ADDR           = DEFAULT_RESET_ADDR;           // program counter reset/boot address
-    localparam USE_CSR              = 1;                            // enable generation of the CSR module
-    localparam USE_TRAP             = 1;                            // enable generation of the Trap Unit (requires CSR)
-    localparam USE_MTIME            = 0;                            // enable generation of machine timer address space
-    localparam USE_AXI              = 1;                            // enable generation of AXI address space
 
 
     ////////////////////////////////////////////////////////////
@@ -66,6 +65,14 @@ module lexington_soc #(
     logic axi_busy;                                     // DBus
     rv32::word wr_data;                                 // shared write data
     logic [(rv32::XLEN/8)-1:0] wr_strobe;               // shared write strobe
+    // Hardware Debugger Ports
+    logic dbg_uart_en;
+    logic dbg_uart_send;
+    logic dbg_uart_recv;
+    logic [7:0] dbg_uart_dout;
+    logic [7:0] dbg_uart_din;
+    logic dbg_uart_rx_busy;
+    logic dbg_uart_tx_busy;
     // Interrupt flags
     logic gpioa_int_0;                                  // GPIOA interrupt 0
     logic gpioa_int_1;                                  // GPIOA interrupt 1
@@ -82,6 +89,7 @@ module lexington_soc #(
     axi4_lite #(.WIDTH(rv32::XLEN), .ADDR_WIDTH(GPIO_ADDR_WIDTH)) axi_gpioa();
     axi4_lite #(.WIDTH(rv32::XLEN), .ADDR_WIDTH(GPIO_ADDR_WIDTH)) axi_gpiob();
     axi4_lite #(.WIDTH(rv32::XLEN), .ADDR_WIDTH(GPIO_ADDR_WIDTH)) axi_gpioc();
+    axi4_lite #(.WIDTH(rv32::XLEN), .ADDR_WIDTH(UART_ADDR_WIDTH)) axi_uart0();
     ////////////////////////////////////////////////////////////
     // END: Internal Wires
     ////////////////////////////////////////////////////////////
@@ -95,7 +103,6 @@ module lexington_soc #(
     // BEGIN: Core Instantiation
     ////////////////////////////////////////////////////////////
     core #(
-        .CLK_PERIOD(CLK_PERIOD),
         .ROM_ADDR_WIDTH(ROM_ADDR_WIDTH),
         .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
         .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
@@ -104,12 +111,8 @@ module lexington_soc #(
         .MTIME_BASE_ADDR(MTIME_BASE_ADDR),
         .AXI_BASE_ADDR(AXI_BASE_ADDR),
         .HART_ID(HART_ID),
-        .RESET_ADDR(RESET_ADDR),
-        .USE_CSR(USE_CSR),
-        .USE_TRAP(USE_TRAP),
-        .USE_MTIME(USE_MTIME),
-        .USE_AXI(USE_AXI)
-    ) core0 (
+        .RESET_ADDR(RESET_ADDR)
+    ) CORE0 (
         .clk,
         .rst_n,
         .rom_rd_en1,
@@ -155,7 +158,7 @@ module lexington_soc #(
     ////////////////////////////////////////////////////////////
     rom #(
         .ADDR_WIDTH(ROM_ADDR_WIDTH)
-    ) rom0 (
+    ) ROM0 (
         .rd_en1(rom_rd_en1),
         .addr1(rom_addr1),
         .rd_data1(rom_rd_data1),
@@ -167,7 +170,7 @@ module lexington_soc #(
     ram #(
         .ADDR_WIDTH(RAM_ADDR_WIDTH),
         .DUMP_MEM(0)
-    ) ram0 (
+    ) RAM0 (
         .clk,
         .rd_en(ram_rd_en),
         .wr_en(ram_wr_en),
@@ -186,12 +189,35 @@ module lexington_soc #(
 
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
+    // BEGIN: Hardware Debugger Instantiation
+    ////////////////////////////////////////////////////////////
+    debug DEBUG (
+        .clk,
+        .rst_n,
+        .uart_en(dbg_uart_en),
+        .uart_send(dbg_uart_send),
+        .uart_recv(dbg_uart_recv),
+        .uart_dout(dbg_uart_dout),
+        .uart_din(dbg_uart_din),
+        .uart_rx_busy(dbg_uart_rx_busy),
+        .uart_tx_busy(dbg_uart_tx_busy)
+    );
+    ////////////////////////////////////////////////////////////
+    // END: Hardware Debugger Instantiation
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
+
+
+
+
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
     // BEGIN: AXI Manager & Crossbar Instantiation
     ////////////////////////////////////////////////////////////
     axi4_lite_manager #(
         .ADDR_WIDTH(AXI_ADDR_WIDTH),
         .TIMEOUT(AXI_TIMEOUT)
-    ) core0_axi (
+    ) CORE0_AXI (
         .clk,
         .rst_n,
         .rd_en(axi_rd_en),
@@ -207,15 +233,16 @@ module lexington_soc #(
     axi4_lite_crossbar #(
         .WIDTH(rv32::XLEN),
         .ADDR_WIDTH(AXI_ADDR_WIDTH),
-        .COUNT(3),
-        .S_ADDR_WIDTH({GPIO_ADDR_WIDTH, GPIO_ADDR_WIDTH, GPIO_ADDR_WIDTH}),
-        .S_BASE_ADDR({GPIOA_BASE_ADDR, GPIOB_BASE_ADDR, GPIOC_BASE_ADDR})
-    ) crossbar (
+        .COUNT(4),
+        .S_ADDR_WIDTH({GPIO_ADDR_WIDTH, GPIO_ADDR_WIDTH, GPIO_ADDR_WIDTH, UART_ADDR_WIDTH}),
+        .S_BASE_ADDR({GPIOA_BASE_ADDR, GPIOB_BASE_ADDR, GPIOC_BASE_ADDR, UART0_BASE_ADDR})
+    ) AXI_CROSSBAR (
         .axi_m,
         .axi_sx({
             axi_gpioa,
             axi_gpiob,
-            axi_gpioc
+            axi_gpioc,
+            axi_uart0
         })
     );
     ////////////////////////////////////////////////////////////
@@ -233,7 +260,7 @@ module lexington_soc #(
     gpio #(
         .WIDTH(rv32::XLEN),
         .PIN_COUNT(16)
-    ) gpioa_inst (
+    ) GPIOA (
         .io_pins(gpioa),
         .int0(gpioa_int_0),
         .int1(gpioa_int_1),
@@ -242,7 +269,7 @@ module lexington_soc #(
     gpio #(
         .WIDTH(rv32::XLEN),
         .PIN_COUNT(16)
-    ) gpiob_inst (
+    ) GPIOB (
         .io_pins(gpiob),
         .int0(gpiob_int_0),
         .int1(gpiob_int_1),
@@ -251,14 +278,31 @@ module lexington_soc #(
     gpio #(
         .WIDTH(rv32::XLEN),
         .PIN_COUNT(16)
-    ) gpioc_inst (
+    ) GPIOC (
         .io_pins(gpioc),
         .int0(gpioc_int_0),
         .int1(gpioc_int_1),
         .axi(axi_gpioc)
     );
-    assign uart0_rx_int = 0;
-    assign uart0_tx_int = 0;
+    uart #(
+        .WIDTH(rv32::XLEN),
+        .BUS_CLK(CLK_FREQ),
+        .BAUD(UART0_BAUD),
+        .FIFO_DEPTH(UART0_FIFO_DEPTH)
+    ) UART0 (
+        .rx(uart0_rx),
+        .tx(uart0_tx),
+        .rx_int(uart0_rx_int),
+        .tx_int(uart0_tx_int),
+        .dbg_en(dbg_uart_en),
+        .dbg_send(dbg_uart_send),
+        .dbg_recv(dbg_uart_recv),
+        .dbg_dout(dbg_uart_dout),
+        .dbg_din(dbg_uart_din),
+        .dbg_rx_busy(dbg_uart_rx_busy),
+        .dbg_tx_busy(dbg_uart_tx_busy),
+        .axi(axi_uart0)
+    );
     assign timer0_int = 0;
     assign timer1_int = 0;
     ////////////////////////////////////////////////////////////

@@ -1,11 +1,11 @@
-//depend lexington_soc.sv
+//depend soc.sv
 //depend core.sv
 //depend core/*.sv
-//depend mem/rom.sv
-//depend mem/ram.sv
+//depend debug.sv
+//depend mem/*.sv
 //depend axi4_lite_manager.sv
 //depend axi4_lite_crossbar.sv
-//depend peripheral/gpio.sv
+//depend peripheral/*.sv
 `timescale 1ns/1ps
 
 
@@ -74,14 +74,17 @@ module top (
     assign gpioc[15] = btnD;
 
 
-    lexington_soc #(
-        .CLK_PERIOD(20.0)
-    ) cpu (
+    soc #(
+        .UART0_BAUD(9600),
+        .UART0_FIFO_DEPTH(8)
+    ) SOC (
         .clk(core_clk),
         .rst_n,
         .gpioa,
         .gpiob,
-        .gpioc
+        .gpioc,
+        .uart0_rx(RxRx),
+        .uart0_tx(RxTx)
     );
 
 

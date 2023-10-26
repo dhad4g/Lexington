@@ -7,6 +7,7 @@ proc usage {} {
     puts ""
     puts "    -i, -include_dirs     Include directory"
     puts "    -v, -verbose          Disable message limits"
+    puts "        -debug            Add debug core"
     puts "    -h, -help             Prints this usage message"
     puts ""
 }
@@ -18,13 +19,15 @@ if { $argc < 1} {
     exit 1
 }
 set ind_dir ""
+set debug 0
 lappend sv_files
 for {set i 0} {$i < $argc} {incr i} {
     set option [string trim [lindex $argv $i]]
     switch -regexp -- $option {
-        "(-i|--?include_dirs)"  { incr i; set inc_dir [lindex $argv $i]}
-        "(-v|--?verbose)"       { set_param messaging.defaultLimit 1000 }
-        "(-h|--?help)"          { usage; exit 0}
+        "^(-i|--?include_dirs)"  { incr i; set inc_dir [lindex $argv $i]}
+        "^(-v|--?verbose)"       { set_param messaging.defaultLimit 1000 }
+        "^--?debug"               { set debug 1}
+        "^(-h|--?help)"          { usage; exit 0}
         default {
             lappend sv_files [lindex $argv $i]
         }
@@ -66,8 +69,32 @@ read_verilog -sv $sv_files
 read_xdc Basys3.xdc
 
 # Run Synthesis
-synth_design -top top -include_dirs $inc_dir -part xc7a35tcpg236-1
+synth_design -top top -include_dirs $inc_dir -part xc7a35tcpg236-1 -flatten_hierarchy none
 write_verilog -force post_synth.v
+
+# Create debug core (Integrated Logic Analyzer)
+if {$debug} {
+    create_debug_core ila0 ila
+    set dbg_core [get_debug_cores ila0]
+    # ILA Properties
+    set_property C_DATA_DEPTH 1024 $dbg_core
+    set_property C_TRIGIN_EN false $dbg_core
+    set_property C_TRIGOUT_EN false $dbg_core
+    set_property C_ADV_TRIGGER false $dbg_core
+    set_property C_INPUT_PIPE_STAGES 0 $dbg_core
+    set_property C_EN_STRG_QUAL false $dbg_core
+    set_property ALL_PROBE_SAME_MU true $dbg_core
+    set_property ALL_PROBE_SAME_MU_CNT 1 $dbg_core
+    # Connect clk port
+    set_property port_width 1 [get_debug_ports ila0/clk]
+        connect_debug_port ila0/clk [get_nets [list core_clk]]
+    # Connect probes
+    set_property port_width 32 [get_debug_ports ila0/probe0]
+        connect_debug_port ila0/probe0 [get_nets -of [get_pins SOC/CORE0/PC/pc]]
+    # create_debug_port ila0 probe
+    #     set_property port_width 32 [get_debug_ports ila0/probe1]
+    #     connect_debug_port ila0/probe1 [get_nets [list GPIOx_mode]]
+}
 
 # Implement (optimize, place, route)
 opt_design

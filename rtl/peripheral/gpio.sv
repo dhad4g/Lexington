@@ -17,20 +17,20 @@ module gpio #(
     );
 
     // AXI registers
-    logic [WIDTH-1:0] gpiox_mode, gpiox_idata, gpiox_odata, gpiox_int_conf;
+    logic [WIDTH-1:0] GPIOx_mode, GPIOx_idata, GPIOx_odata, GPIOx_int_conf;
 
 
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
     // BEGIN: I/O Logic
     ////////////////////////////////////////////////////////////
-    assign gpiox_idata[PIN_COUNT-1:0] = io_pins;
-    assign gpiox_idata[WIDTH-1:PIN_COUNT] = 0;
+    assign GPIOx_idata[PIN_COUNT-1:0] = io_pins;
+    assign GPIOx_idata[WIDTH-1:PIN_COUNT] = 0;
     generate
         // Output tristate
         genvar i;
         for (i=0; i<PIN_COUNT; i++) begin
-            assign io_pins[i] = (gpiox_mode[i]) ? gpiox_odata[i] : 1'bz;
+            assign io_pins[i] = (GPIOx_mode[i]) ? GPIOx_odata[i] : 1'bz;
         end
     endgenerate
     ////////////////////////////////////////////////////////////
@@ -55,11 +55,11 @@ module gpio #(
         LOW     = 3'b111
     } mode_t;
     mode_t int_mode[2];
-    assign int_mode[0] = mode_t'(gpiox_int_conf[2:0]);
-    assign int_mode[1] = mode_t'(gpiox_int_conf[5:3]);
+    assign int_mode[0] = mode_t'(GPIOx_int_conf[2:0]);
+    assign int_mode[1] = mode_t'(GPIOx_int_conf[5:3]);
     logic [4:0] int_pin [1:0];
-    assign int_pin[0] = gpiox_int_conf[10:6];
-    assign int_pin[1] = gpiox_int_conf[15:11];
+    assign int_pin[0] = GPIOx_int_conf[10:6];
+    assign int_pin[1] = GPIOx_int_conf[15:11];
     // Interrupt state registers
     logic [1:0] startup;    // disable interrupts on first cycle after reset/reconfig
     logic [1:0] prev_mode;  // previous interrupt mode
@@ -78,10 +78,10 @@ module gpio #(
                     // config is stable
                     if (int_pin[i] < PIN_COUNT) begin
                         case (int_mode[i])
-                            RISING:  interrupts[i]  <= gpiox_idata[int_pin[i]] & ~prev_val[i];
-                            FALLING: interrupts[i]  <= ~gpiox_idata[int_pin[i]] & prev_val[i];
-                            HIGH:    interrupts[i]  <= gpiox_idata[int_pin[i]];
-                            LOW:     interrupts[i]  <= ~gpiox_idata[int_pin[i]];
+                            RISING:  interrupts[i]  <= GPIOx_idata[int_pin[i]] & ~prev_val[i];
+                            FALLING: interrupts[i]  <= ~GPIOx_idata[int_pin[i]] & prev_val[i];
+                            HIGH:    interrupts[i]  <= GPIOx_idata[int_pin[i]];
+                            LOW:     interrupts[i]  <= ~GPIOx_idata[int_pin[i]];
                             default: interrupts[i]  <= 0;
                         endcase
                     end
@@ -90,7 +90,7 @@ module gpio #(
                 prev_mode[i] <= int_mode[i];
                 prev_pin[i]  <= int_pin[i];
                 if (prev_pin[i] < PIN_COUNT) begin
-                    prev_val[i] <= gpiox_idata[int_pin[i]];
+                    prev_val[i] <= GPIOx_idata[int_pin[i]];
                 end
                 startup <= 1;
             end
@@ -143,13 +143,13 @@ module gpio #(
             endcase
         end
     end
-    // read data
+    // decode read address
     always_comb begin
         case (_araddr)
-            4'h0: axi.rdata = gpiox_mode;
-            4'h4: axi.rdata = gpiox_idata;
-            4'h8: axi.rdata = gpiox_odata;
-            4'hC: axi.rdata = gpiox_int_conf;
+            4'h0: axi.rdata = GPIOx_mode;
+            4'h4: axi.rdata = GPIOx_idata;
+            4'h8: axi.rdata = GPIOx_odata;
+            4'hC: axi.rdata = GPIOx_int_conf;
             default: axi.rdata = 0;
         endcase
     end
@@ -173,9 +173,9 @@ module gpio #(
             axi.wready  <= 0;
             axi.bvalid  <= 0;
             axi.bresp   <= axi.OKAY;
-            gpiox_mode  <= 0;
-            gpiox_odata <= 0;
-            gpiox_int_conf <= 0;
+            GPIOx_mode  <= 0;
+            GPIOx_odata <= 0;
+            GPIOx_int_conf <= 0;
         end
         else begin
             case (wr_state)
@@ -195,10 +195,10 @@ module gpio #(
                         // default to OKAY response
                         axi.bresp   <= axi.OKAY;
                         case (_awaddr)
-                            4'h0: gpiox_mode    <= axi.wdata;
+                            4'h0: GPIOx_mode    <= axi.wdata;
                             4'h4: axi.bresp     <= axi.SLVERR; // read-only
-                            4'h8: gpiox_odata   <= axi.wdata;
-                            4'hC: gpiox_int_conf<= axi.wdata;
+                            4'h8: GPIOx_odata   <= axi.wdata;
+                            4'hC: GPIOx_int_conf<= axi.wdata;
                             default: axi.bresp  <= axi.SLVERR; // address misaligned
                         endcase
                     end
@@ -210,7 +210,7 @@ module gpio #(
                         axi.bvalid  <= 0;
                     end
                 end
-                default: begin
+                default: begin // invalid state
                     wr_state    <= AW_READY;
                     axi.awready <= 1;
                     axi.wready  <= 0;

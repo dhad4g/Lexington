@@ -51,6 +51,7 @@
         "GPIO",
         "gpiob",
         "gpioc",
+        "Hsync",
         "IALIGN",
         "ibus",
         "idata",
@@ -70,6 +71,8 @@
         "mepc",
         "mhartid",
         "mhpmevent",
+        "MILLI",
+        "MILLIS",
         "mimpid",
         "minstret",
         "minstreth",
@@ -97,6 +100,7 @@
         "RDATA",
         "rdcycle",
         "rdcycleh",
+        "regfile",
         "RREADY",
         "RRESP",
         "RVALID",
@@ -111,6 +115,7 @@
         "SPIE",
         "SRAI",
         "SRAM",
+        "sreset",
         "SRET",
         "SRLI",
         "SSIP",
@@ -119,6 +124,7 @@
         "SUBI",
         "timeh",
         "uimm",
+        "Vsync",
         "WARL",
         "WDATA",
         "WLRL",
@@ -129,5 +135,11 @@
         "XLEN",
         "XORI",
         "xret"
+    ],
+    "C_Cpp.default.includePath": [
+        "sw/lib/inc"
+    ],
+    "C_Cpp.default.systemIncludePath": [
+        "W:/opt/riscv32i_zicsr/lib/gcc/riscv32-unknown-elf/12.2.0/include"
     ]
 }

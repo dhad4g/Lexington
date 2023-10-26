@@ -75,7 +75,7 @@ function sim() {
     echo
 
     # compile
-    special_exec xvlog $XVLOG_OPTS $sv_files | $OUT_FORMAT
+    special_exec xvlog $XVLOG_OPTS $sv_files 2>&1 | $OUT_FORMAT
     rval=$PIPESTATUS
     if [ "$rval" == "0" ]; then
         echo
@@ -90,7 +90,7 @@ function sim() {
     fi
 
     # elaborate
-    special_exec xelab $XELAB_OPTS -s sim ${module}_TB | $OUT_FORMAT
+    special_exec xelab $XELAB_OPTS -s sim ${module}_TB 2>&1 | $OUT_FORMAT
     rval=$PIPESTATUS
     if [ "$rval" = "0" ]; then
         echo
@@ -108,7 +108,7 @@ function sim() {
     if $check_only; then
         return $rval
     else
-        special_exec xsim $XSIM_OPTS --runall sim | $OUT_FORMAT
+        special_exec xsim $XSIM_OPTS --runall sim 2>&1 | $OUT_FORMAT
         rval=$PIPESTATUS
         if [ "$rval" = "0" ]; then
             #echo -e "${BLUE}Simulate for $module complete${NORMAL}"
