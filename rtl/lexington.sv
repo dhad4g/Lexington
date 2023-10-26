@@ -6,25 +6,34 @@
 
 package lexington;
 
-    localparam DEFAULT_CLK_PERIOD       = 10.0;             // core clock period in ns
 
+    localparam CLK_FREQ                 = 40_000_000;       // core clock frequency in Hz
+
+    // Address Widths
     localparam DEFAULT_ROM_ADDR_WIDTH   = 10;               // word-addressable ROM address bits
     localparam DEFAULT_RAM_ADDR_WIDTH   = 10;               // word-addressable RAM address bits
     localparam DEFAULT_AXI_ADDR_WIDTH   = 29;               // byte-addressable AXI address space bits
     localparam MTIME_ADDR_WIDTH         = 4;                // byte-addressable machine timer address bits
     localparam GPIO_ADDR_WIDTH          = 4;                // byte-addressable GPIO address bits
+    localparam UART_ADDR_WIDTH          = 3;                // byte-addressable UART address bits
 
+    // Base Addresses
     // The following addresses are byte-addressable in the 32-bit address space
     localparam DEFAULT_RESET_ADDR       = 32'h0000_0000;    // program counter reset/boot address
     localparam DEFAULT_ROM_BASE_ADDR    = 32'h0000_0000;    // must be aligned to ROM size
     localparam DEFAULT_RAM_BASE_ADDR    = 32'h4000_0000;    // must be aligned to RAM size
     localparam DEFAULT_MTIME_BASE_ADDR  = 32'hC000_0000;    // see CSR documentation
     localparam DEFAULT_AXI_BASE_ADDR    = 32'hE000_0000;    // must be aligned to AXI address space
-    localparam GPIOA_BASE_ADDR          = 32'hFFFF_FFA0;    // GPIOA
-    localparam GPIOB_BASE_ADDR          = 32'hFFFF_FFB0;    // GPIOB
-    localparam GPIOC_BASE_ADDR          = 32'hFFFF_FFC0;    // GPIOC
+    localparam GPIOA_BASE_ADDR          = 32'hFFFF_FFA0;    // GPIOA base address
+    localparam GPIOB_BASE_ADDR          = 32'hFFFF_FFB0;    // GPIOB base address
+    localparam GPIOC_BASE_ADDR          = 32'hFFFF_FFC0;    // GPIOC base address
+    localparam UART0_BASE_ADDR          = 32'hFFFF_FF8F;    // UART0 base address
 
+    // Other Tunable Parameters
+    localparam MTIME_FREQ               = 1_000;            // mtime 'tick' frequency
     localparam DEFAULT_AXI_TIMEOUT      = 17;               // bus timeout in number of cycles
+    localparam DEFAULT_UART_BAUD        = 9600;             // UART BAUD rate
+    localparam DEFAULT_UART_FIFO_DEPTH  = 8;                // FIFO depth for both TX and RX (depth 0 is invalid)
 
 
     localparam ALU_OP_WIDTH     = 4;                // ALU operation select width

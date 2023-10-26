@@ -1,16 +1,15 @@
 //depend soc.sv
 //depend core.sv
 //depend core/*.sv
-//depend core/pipeline/*.sv
-//depend mem/rom.sv
-//depend mem/ram.sv
+//depend debug.sv
+//depend mem/*.sv
 //depend axi4_lite_manager.sv
 //depend axi4_lite_crossbar.sv
-//depend peripheral/gpio.sv
+//depend peripheral/*.sv
 `timescale 1ns/1ps
 
 
-// Top module for implementing Saratoga CPU on the Digilent Basys3
+// Top module for implementing Lexington CPU on the Digilent Basys3
 module top (
 
     // Clock signal
@@ -81,13 +80,17 @@ module top (
 
 
     soc #(
-        .CLK_PERIOD(20.0)
+        .CLK_PERIOD(20.0),
+        .UART0_BAUD(9600),
+        .UART0_FIFO_DEPTH(8)
     ) SOC (
         .clk(core_clk),
         .rst_n(rst_n),
         .gpioa(gpioa),
         .gpiob(gpiob),
-        .gpioc(gpioc)
+        .gpioc(gpioc),
+        .uart0_rx(RxRx),
+        .uart0_tx(RxTx)
     );
 
 

@@ -6,9 +6,7 @@
 import lexington::*;
 
 
-module mtime #(
-        parameter CLK_PERIOD   = DEFAULT_CLK_PERIOD    // system clock period in ns
-    ) (
+module mtime (
         input  logic clk,                                   // system clock
         input  logic rst_n,                                 // reset (active-low)
 
@@ -21,6 +19,8 @@ module mtime #(
         output logic [63:0] time_rd_data,                   // read-only time(h) CSR
         output logic interrupt                              // machine timer interrupt flag
     );
+
+    localparam CYCLES_PER_TICK = CLK_FREQ / MTIME_FREQ;
 
     logic [63:0] mtime;
     logic [63:0] mtimecmp;

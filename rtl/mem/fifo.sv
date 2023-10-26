@@ -3,13 +3,14 @@
 
 module fifo #(
         parameter WIDTH = 8,        // data width
-        parameter DEPTH = 4         // FIFO depth (must be power of 2)
+        parameter DEPTH = 4,        // FIFO depth (must be power of 2)
+        parameter FIRST_WORD_FALLTHROUGH = 0
     )
     (
         input  logic clk,
         input  logic rst_n,
 
-        input  logic wen,
+        input  logic wr_en,
         input  logic [WIDTH-1:0] din,
         output logic full,
 
@@ -24,8 +25,9 @@ module fifo #(
     logic [$clog2(DEPTH)-1:0] head;
     logic [$clog2(DEPTH)-1:0] tail;
 
-
-    assign dout = ram[head];
+    generate if (FIRST_WORD_FALLTHROUGH) begin
+        assign dout = ram[head];
+    end endgenerate
     assign full = (!empty) && (head == tail);
     assign wr_en = wr_en && !full;
 
@@ -42,7 +44,9 @@ module fifo #(
                 tail <= (tail < DEPTH-1) ? tail+1 : 0;
             end
             if (rd_en && !empty) begin
-                dout <= ram[head];
+                if (!FIRST_WORD_FALLTHROUGH) begin
+                    dout <= ram[head];
+                end
                 head <= (head < DEPTH-1) ? head+1 : 0;
                 if (head < DEPTH-1) begin
                     head <= head + 1;

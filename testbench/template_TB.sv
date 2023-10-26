@@ -11,8 +11,8 @@ module template_TB;
     // DUT Parameters
 
     // DUT Ports
-    reg clk;
-    reg rst, rst_n;
+    logic clk;
+    logic rst, rst_n;
 
     assign rst_n = ~rst;
 
