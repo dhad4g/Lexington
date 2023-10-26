@@ -35,6 +35,7 @@ module csr #(
         input  logic dbus_wait,
         input  logic mret,                              // mret instruction flag
         input  logic trap,                              // signals trap occurred this cycle
+        input  logic exception,                         // asserted if trap is an exception
 
         output rv32::priv_mode_t priv                   // current privilege mode
     );
@@ -313,7 +314,7 @@ module csr #(
                 end
             end
 
-            if (wr_en & !dbus_wait) begin
+            if (wr_en & !dbus_wait & !exception) begin
                 // User-Mode CSRs
                 case (addr)
                     rv32::csr_addr_cycle: begin

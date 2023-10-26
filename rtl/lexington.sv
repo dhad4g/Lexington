@@ -7,7 +7,7 @@
 package lexington;
 
 
-    localparam CLK_FREQ                 = 40_000_000;       // core clock frequency in Hz
+    localparam DEFAULT_CLK_FREQ         = 10_000_000;       // core clock frequency in Hz
 
     // Address Widths
     localparam DEFAULT_ROM_ADDR_WIDTH   = 10;               // word-addressable ROM address bits
@@ -30,7 +30,7 @@ package lexington;
     localparam UART0_BASE_ADDR          = 32'hFFFF_FF8F;    // UART0 base address
 
     // Other Tunable Parameters
-    localparam MTIME_FREQ               = 1_000;            // mtime 'tick' frequency
+    localparam MTIME_PERIOD             = 1_000;            // mtime 'tick' period in ns
     localparam DEFAULT_AXI_TIMEOUT      = 17;               // bus timeout in number of cycles
     localparam DEFAULT_UART_BAUD        = 9600;             // UART BAUD rate
     localparam DEFAULT_UART_FIFO_DEPTH  = 8;                // FIFO depth for both TX and RX (depth 0 is invalid)

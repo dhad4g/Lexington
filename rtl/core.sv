@@ -7,7 +7,7 @@ import lexington::*;
 
 
 module core #(
-        parameter CLK_PERIOD        = DEFAULT_CLK_PERIOD,           // system clock period in ns
+        parameter CLK_FREQ          = DEFAULT_CLK_FREQ,             // system clock in Hz
         parameter ROM_ADDR_WIDTH    = DEFAULT_ROM_ADDR_WIDTH,       // ROM address width (word-addressable, default 4kB)
         parameter RAM_ADDR_WIDTH    = DEFAULT_RAM_ADDR_WIDTH,       // RAM address width (word-addressable, default 4kB)
         localparam MTIME_ADDR_WIDTH = 2,
@@ -290,6 +290,7 @@ module core #(
         .dbus_wait,
         .dbus_err,
         .endianness,
+        .exception,
         .dest_en,
         .dest_data,
         .dbus_rd_en,
@@ -333,6 +334,7 @@ module core #(
         .dbus_wait,
         .mret,
         .trap,
+        .exception,
         .priv
     );
     ////////////////////////////////////////////////////////////
@@ -401,7 +403,9 @@ module core #(
     ////////////////////////////////////////////////////////////
     // BEGIN: Machine Timer Instantiation
     ////////////////////////////////////////////////////////////
-    mtime MTIME (
+    mtime #(
+        .CLK_FREQ(CLK_FREQ)
+    ) MTIME (
         .clk,
         .rst_n,
         .rd_en(mtime_rd_en),

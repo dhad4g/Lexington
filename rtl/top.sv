@@ -80,7 +80,7 @@ module top (
 
 
     soc #(
-        .CLK_PERIOD(20.0),
+        .CLK_FREQ(40_000_000),
         .UART0_BAUD(9600),
         .UART0_FIFO_DEPTH(8)
     ) SOC (

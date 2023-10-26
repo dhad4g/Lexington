@@ -13,6 +13,7 @@ module lsu (
         input rv32::word alu_result,                            // output from alu (data or mem addr)
         input rv32::word alt_data,                              // data source for store and CSR read instructions
         input logic endianness,                                 // data memory endianness select (0=little,1=big)
+        input logic exception,
 
         // Register File write port
         output logic dest_en,                                   // register file write enable
@@ -152,7 +153,7 @@ module lsu (
                 csr_wr_en  = 0;
             end
         endcase
-        if (dbus_wait | dbus_err) begin
+        if (dbus_wait | dbus_err | exception) begin
             // override register file write enable
             dest_en     = 0;
         end
