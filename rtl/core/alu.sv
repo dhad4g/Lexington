@@ -5,9 +5,7 @@
 import lexington::*;
 
 
-module alu #(
-        
-    ) (
+module alu (
         // clock not needed; module is purely combinatorial
         // reset not needed; module is combinatorial and stateless
 

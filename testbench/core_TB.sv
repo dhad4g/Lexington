@@ -27,12 +27,7 @@ module core_TB;
     parameter RAM_BASE_ADDR     = DEFAULT_RAM_BASE_ADDR;        // RAM base address (must be aligned to RAM size)
     parameter MTIME_BASE_ADDR   = DEFAULT_MTIME_BASE_ADDR;      // machine timer base address (see [CSR](./CSR.md))
     parameter AXI_BASE_ADDR     = DEFAULT_AXI_BASE_ADDR;        // AXI bus address space base (must be aligned to AXI address space)
-    parameter HART_ID           = 0;                            // hardware thread id (see mhartid CSR)
     parameter RESET_ADDR        = DEFAULT_RESET_ADDR;           // program counter reset/boot address
-    parameter USE_CSR           = 1;                            // enable generation of the CSR module
-    parameter USE_TRAP          = 1;                            // enable generation of the Trap Unit (requires CSR)
-    parameter USE_MTIME         = 0;                            // enable generation of machine timer address space
-    parameter USE_AXI           = 0;                            // enable generation of AXI address space
 
     // DUT Ports
     logic clk;                                          // global system clock
@@ -85,12 +80,8 @@ module core_TB;
         .RAM_BASE_ADDR(RAM_BASE_ADDR),
         .MTIME_BASE_ADDR(MTIME_BASE_ADDR),
         .AXI_BASE_ADDR(AXI_BASE_ADDR),
-        .HART_ID(HART_ID),
         .RESET_ADDR(RESET_ADDR),
-        .USE_CSR(USE_CSR),
-        .USE_TRAP(USE_TRAP),
-        .USE_MTIME(USE_MTIME),
-        .USE_AXI(USE_AXI)
+        .HART_ID(0)
     ) DUT (
         .clk,
         .rst_n,
@@ -128,6 +119,7 @@ module core_TB;
     rom #(
         .ADDR_WIDTH(ROM_ADDR_WIDTH)
     ) ROM0 (
+        .clk,
         .rd_en1(rom_rd_en1),
         .addr1(rom_addr1),
         .rd_data1(rom_rd_data1),
@@ -175,14 +167,14 @@ module core_TB;
         timer0_int = 0;
         timer1_int = 0;
 
-        // Reset
-        rst = 1;
-        #200;
-        rst = 0;
-
         fid = $fopen("core.log");
         $dumpfile("core.vcd");
         $dumpvars(3, core_TB);
+
+        // Reset
+        rst = 1;
+        #255;
+        rst = 0;
     end
 
 

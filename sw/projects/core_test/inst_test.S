@@ -73,7 +73,7 @@ inst_test:
     // test SRA
     __test_sra:
     li      x10, 0xFFFFFF00
-    sra     x10, x10, x7    // 0xFFFF_FF00 >>> 7 = 0xFFFF_FFFE 
+    sra     x10, x10, x7    // 0xFFFF_FF00 >>> 7 = 0xFFFF_FFFE
     li      x11, 0xFFFFFFFE
     call    check
     // test OR
@@ -293,7 +293,7 @@ inst_test:
     __test_misa:
     li      x10, 0xFFFFFFFF
     csrrw   x10, misa, x10
-    li      x11, 0x40000000     // expected value
+    li      x11, 0x40000100     // expected value
     call    check
     csrr    x10, misa
     call    check
@@ -335,7 +335,7 @@ inst_test:
     csrw    mstatus, x10
     csrw    mstatush, x10
     csrr    x10, mstatus
-    li      x11, 0x18AA         // MPP, MPIE, SPIE, MIE, & SIE bits set
+    li      x11, 0x000218EA     // MPRV, MPP, MPIE, UBE, SPIE, MIE, SIE bits set
     call    check
     csrr    x10, mstatush
     li      x11, 0x20           // MBE bit set
@@ -344,7 +344,7 @@ inst_test:
     csrw    mstatus, 0
     csrw    mstatush, 0
     csrr    x10, mstatus
-    li      x11, 0x1822         // MPP, SPIE, & SIE bits set
+    li      x11, 0x22           // SPIE & SIE bits set
     call    check
     csrr    x10, mstatush
     li      x11, 0              // no bits set
@@ -550,10 +550,6 @@ inst_test:
     auipc   x11, 0
     csrr    x10, mepc
     call    check
-    // check mtval
-    addi    x11, x11, -4
-    csrr    x10, mtval
-    call    check
     // check mcause
     li      x11, 3
     csrr    x10, mcause
@@ -648,17 +644,22 @@ inst_test:
     addi    sp, sp, 4
 
     // Simple interrupt test
-    __test_interrupt:
+    __test_interrupt_begin:
     la      x10, trap_vector_table
     csrw    mtvec, x10          // set trap vector table
     csrs    mtvec, 1            // enable vectored mode
-    // check mepc
+    csrw    mip, x0             // clear pending interrupts
+    csrw    mie, x0             // disable all interrupts
+    csrsi   mstatus, 0x8        // enable global machine-mode interrupts
+    __test_interrupt_31:
     li      x11, 1
-    sll     x11, x11, 18        // tim0 interrupt bit
-    csrw    mie, x11
-    csrw    mip, x11            // trigger tim0 interrupt
+    sll     x11, x11, 31        // unused interrupt source
+    csrw    mie, x11            // enable interrupt
+    csrw    mip, x11            // trigger interrupt
     nop
     auipc   x11, 0
+    addi    x11, x11, -4
+    // check mepc
     csrr    x10, mepc
     call    check
     // check mtval
@@ -667,11 +668,34 @@ inst_test:
     call    check
     // check mcause
     li      x11, 0x80000000     // mcause interrupt bit
-    or      x11, x11, 18        // tim0 interrupt
+    or      x11, x11, 31        // interrupt cause
     csrr    x10, mcause
     call    check
+    __test_interrupt_end:
+    csrw    mie, x0             // disable all interrupts
+    csrci   mstatus, 0x8        // disable global machine-mode interrupts
+
+
+    // Test User Mode
+    __test_umode_begin:
+    la      x10, umode_handler
+    csrw    mtvec, x10          // set trap handler
+    la      x10, __test_umode_csr
+    csrw    mepc, x10           // umode function address
+    li      x11, 0x00001800     // MPP mask for mstatus
+    csrc    mstatus, x11        // set previous privilege to umode
+    mret                        // enter user mode
+    __test_umode_csr:
+    li      x11, -1
+    mv      x10, x11
+    csrr    x10, mstatus        // unprivileged access
+    call    check               // x10 should be unchanged
+    __test_umode_end:
+    ecall                       // return to machine mode
+
 
     // FENCE, MRET, and WFI are not explicitly tested
+
 
     __test_done:
     // finally test that all registers are correct (except x1, x2, x10, & x11)
@@ -692,6 +716,7 @@ inst_test:
 // Check values function
 check: // void check(int test_value, int correct_value)
     csrw    mscratch, 0
+    nop
     fence
     ret
 
@@ -700,6 +725,7 @@ check: // void check(int test_value, int correct_value)
 done:
     li      x10, 0x0D15EA5E
     csrw    mscratch, x10
+    nop
     fence
     __dead_loop:
     j       __dead_loop
@@ -774,6 +800,33 @@ exception_isr: // sets x10 to mepc, trap-return to mepc+4
     mret
 test_ex_isr_inst_access_fault: // sets x10 to mepc, trap-return to x10 argument
     csrrw   x10, mepc, x10
+    mret
+
+
+// User Mode tests trap handler
+umode_handler:
+    addi    sp, sp, -8
+    sw      x10, 0(sp)
+    sw      x11, 4(sp)
+    csrr    x10, mcause
+    blt     x10, x0, umode_isr
+    li      x11, 8              // ECALL from umode trap code
+    beq     x10, x11, ecall_from_umode_handler
+umode_ex_handler:
+    csrr    x10, mepc           // return to next instruction
+    addi    x10, x10, 4
+    csrw    mepc, x10
+    j       umode_handler_exit
+umode_isr:
+    j       umode_handler_exit
+ecall_from_umode_handler:
+    li      x10, 0x00001800     // MPP mask for mstatus
+    csrs    mstatus, x10        // set previous privilege to mmode
+    j       umode_handler_exit
+umode_handler_exit:
+    lw      x10, 0(sp)
+    lw      x11, 4(sp)
+    addi    sp, sp, 8
     mret
 
 

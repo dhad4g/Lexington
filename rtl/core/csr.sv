@@ -34,13 +34,15 @@ module csr #(
         output logic illegal_csr,                       // illegal CSR address or access permission
         input  logic dbus_wait,
         input  logic mret,                              // mret instruction flag
-        input  logic trap                               // signals trap occured this cycle
+        input  logic trap,                              // signals trap occurred this cycle
+
+        output rv32::priv_mode_t priv                   // current privilege mode
     );
 
-    // Current privilege level (not visible)
-    rv32::priv_mode_t priv;
-
-    // CSRs
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
+    // BEGIN: CSR Declarations
+    ////////////////////////////////////////////////////////////
     rv32::word misa;
     rv32::word mvendorid;
     rv32::word marchid;
@@ -61,7 +63,7 @@ module csr #(
         logic MPRV;
         logic [1:0] XS;
         logic [1:0] FS;
-        logic [1:0] MPP;
+        rv32::priv_mode_t MPP;
         logic [1:0] VS;
         logic SPP;
         logic MPIE;
@@ -74,7 +76,7 @@ module csr #(
         logic reserved0;
     } mstatus;
     logic [63:0] mcycle;
-    logic [64:0] minstret;
+    logic [63:0] minstret;
     struct packed {
         logic [31:3] HPMx;
         logic IR;
@@ -82,23 +84,32 @@ module csr #(
         logic CY;
     } mcountinhibit;
     rv32::word mscratch;
-    rv32::word mconfigptr;
+        rv32::word mconfigptr;
+    ////////////////////////////////////////////////////////////
+    // END: CSR Declarations
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
+
 
     // Output flag assignments
     assign global_mie = mstatus.MIE;
     assign endianness = mstatus.MBE;
 
-    // Read-Only CSR assignments
-                // MXL    0     z    y    x    w    v    u    t    s    r
-    assign misa = {2'b1, 4'b0, 1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
+    // BEGIN: Read-Only CSRs
+    ////////////////////////////////////////////////////////////
+    assign misa = {2'b01, 4'h0, 1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,
+                //  MXL     0     z    y    x    w    v    u    t    s    r
+                               1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b1,
                 // extensions:   q    p    o    n    m    l    k    j    i
-                               1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,
-                // extensions:   h    g    f    e    d    c    b    a
                                1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0};
+                // extensions:   h    g    f    e    d    c    b    a
     assign mvendorid = 32'h0;
     assign marchid = 32'h0;
     assign mimpid = 32'h1;
     assign mhartid = HART_ID;
+    // mstatus
     assign mstatus.reserved63_38 = 0;
     assign mstatus.SBE = 0;
     assign mstatus.reserved45_32 = 0;
@@ -109,19 +120,20 @@ module csr #(
     assign mstatus.TVM = 0;
     assign mstatus.MXR = 0;
     assign mstatus.SUM = 0;
-    assign mstatus.MPRV = 0;
     assign mstatus.XS = 0;
     assign mstatus.FS = 0;
-    assign mstatus.MPP = 3;
     assign mstatus.VS = 0;
     assign mstatus.SPP = 0;
-    assign mstatus.UBE = 0;
     assign mstatus.SPIE = 1;
     assign mstatus.reserved4 = 0;
     assign mstatus.reserved2 = 0;
     assign mstatus.SIE = 1;
     assign mstatus.reserved0 = 0;
     assign mconfigptr = 0;
+    ////////////////////////////////////////////////////////////
+    // END: Read-Only CSRs
+    ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
 
 
     ////////////////////////////////////////////////////////////
@@ -168,7 +180,7 @@ module csr #(
                 end
             endcase
             // Supervisor-Mode CSRs
-            if (_illegal && priv >= rv32::smode) begin
+            if (_illegal && priv >= rv32::SMODE) begin
                 _illegal = 0;
                 case (addr)
                     default: begin
@@ -177,7 +189,7 @@ module csr #(
                 endcase
             end // if (priv >= smode)
             // Machine-Mode CSRs
-            if (_illegal && priv >= rv32::mmode) begin
+            if (_illegal && priv >= rv32::MMODE) begin
                 _illegal = 0;
                 case (addr)
                     rv32::csr_addr_misa: begin
@@ -257,15 +269,6 @@ module csr #(
                     end
                 endcase
             end // if(priv >= mmode)
-            // Debug-Mode CSRs
-            if (_illegal && priv >= rv32::dmode) begin
-                _illegal = 0;
-                case (addr)
-                    default: begin
-                        _illegal = 1;
-                    end
-                endcase
-            end // if (priv >= dmode)
             // else omitted because it's covered by User-Mode default case
             illegal_csr = (_illegal & (rd_en | wr_en));
         end
@@ -280,17 +283,21 @@ module csr #(
     ////////////////////////////////////////////////////////////
     // BEGIN: Write & Counter Logic
     ////////////////////////////////////////////////////////////
+    logic [rv32::XLEN-1:16] _interrupt_buff;
     always_ff @(posedge clk) begin
         if (!rst_n) begin
-            priv <= rv32::mmode;
+            priv <= rv32::MMODE;
             // CSR reset values
-            mstatus.MBE <= 0;
-            mstatus.MPIE <= 1;
-            mstatus.MIE <= 1;
-            mcycle <= 0;
-            minstret <= 0;
-            mcountinhibit <= 0;
-            mscratch <= 0;
+            mstatus.MBE     <= 0;
+            mstatus.MPRV    <= 0;
+            mstatus.MPP     <= rv32::UMODE;
+            mstatus.MPIE    <= 1;
+            mstatus.UBE     <= 0;
+            mstatus.MIE     <= 1;
+            mcycle          <= 0;
+            minstret        <= 0;
+            mcountinhibit   <= 0;
+            mscratch        <= 0;
         end
         else begin
 
@@ -306,7 +313,7 @@ module csr #(
                 end
             end
 
-            if (wr_en) begin
+            if (wr_en & !dbus_wait) begin
                 // User-Mode CSRs
                 case (addr)
                     rv32::csr_addr_cycle: begin
@@ -332,7 +339,7 @@ module csr #(
                     end
                 endcase
                 // Machine-Mode CSRs
-                if (priv >= rv32::mmode) begin
+                if (priv >= rv32::MMODE) begin
                     case (addr)
                         rv32::csr_addr_misa: begin
                             // read-only
@@ -350,11 +357,16 @@ module csr #(
                             // read-only
                         end
                         rv32::csr_addr_mstatus: begin
-                            mstatus.MPIE <= wr_data[7];
-                            mstatus.MIE  <= wr_data[3];
+                            mstatus.MPRV    <= wr_data[17];
+                            mstatus.MPP     <= (wr_data[12:11]==rv32::MMODE)
+                                                ? rv32::MMODE
+                                                : rv32::UMODE;
+                            mstatus.MPIE    <= wr_data[7];
+                            mstatus.UBE     <= wr_data[6];
+                            mstatus.MIE     <= wr_data[3];
                         end
                         rv32::csr_addr_mstatush: begin
-                            mstatus.MBE <= wr_data[5];
+                            mstatus.MBE     <= wr_data[5];
                         end
                         rv32::csr_addr_mtvec: begin
                             // delegated to trap
@@ -403,14 +415,20 @@ module csr #(
             end // if(wr_en)
 
             // trap behavior, overwrites CSR write instructions
-            if (trap) begin
-                mstatus.MPIE <= mstatus.MIE;
-                mstatus.MIE  <= 0;
-                // no MPP, only m-mode supported
+            if (trap & !dbus_wait) begin
+                priv            <= rv32::MMODE;
+                mstatus.MPIE    <= mstatus.MIE;
+                mstatus.MIE     <= 0;
+                mstatus.MPP     <= priv;
             end
             else if (mret) begin
-                mstatus.MIE  <= mstatus.MPIE;
-                mstatus.MPIE <= 1;
+                priv            <= mstatus.MPP;
+                mstatus.MIE     <= mstatus.MPIE;
+                mstatus.MPIE    <= 1;
+                mstatus.MPP     <= rv32::UMODE;
+                if (mstatus.MPP != rv32::MMODE) begin
+                    mstatus.MPRV <= 0;
+                end
             end
 
         end

@@ -1,14 +1,4 @@
-//depend core/ibus.sv
-//depend core/dbus.sv
-//depend core/pc.sv
-//depend core/regfile.sv
-//depend core/fetch.sv
-//depend core/decoder.sv
-//depend core/alu.sv
-//depend core/lsu.sv
-//depend core/csr.sv
-//depend core/trap.sv
-//depend core/mtime.sv
+//depend core/*.sv
 `timescale 1ns/1ps
 
 `include "rv32.sv"
@@ -26,12 +16,8 @@ module core #(
         parameter RAM_BASE_ADDR     = DEFAULT_RAM_BASE_ADDR,        // RAM base address (must be aligned to RAM size)
         parameter MTIME_BASE_ADDR   = DEFAULT_MTIME_BASE_ADDR,      // machine timer base address (see [CSR](./CSR.md))
         parameter AXI_BASE_ADDR     = DEFAULT_AXI_BASE_ADDR,        // AXI bus address space base (must be aligned to AXI address space)
-        parameter HART_ID           = 0,                            // hardware thread id (see mhartid CSR)
         parameter RESET_ADDR        = DEFAULT_RESET_ADDR,           // program counter reset/boot address
-        parameter USE_CSR           = 1,                            // enable generation of the CSR module
-        parameter USE_TRAP          = 1,                            // enable generation of the Trap Unit (requires CSR)
-        parameter USE_MTIME         = 1,                            // enable generation of machine timer address space
-        parameter USE_AXI           = 1                             // enable generation of AXI address space
+        parameter HART_ID           = 0                             // hardware thread id (see mhartid CSR)
     ) (
         input  logic clk,                                           // global system clock
         input  logic rst_n,                                         // global reset, active-low
@@ -101,13 +87,13 @@ module core #(
     logic rs1_en;
     logic rs2_en;
     logic dest_en;
-    rv32::reg_addr_t rs1_addr;
-    rv32::reg_addr_t rs2_addr;
-    rv32::reg_addr_t dest_addr;
+    rv32::gpr_addr_t rs1_addr;
+    rv32::gpr_addr_t rs2_addr;
+    rv32::gpr_addr_t dest_addr;
     rv32::word rs1_data;
     rv32::word rs2_data;
     rv32::word dest_data;
-    // Decode/ALU/LSU
+// Decode/ALU/LSU
     rv32::word src1;
     rv32::word src2;
     rv32::word alt_data;
@@ -137,7 +123,7 @@ module core #(
     logic [MTIME_ADDR_WIDTH-1:0] mtime_addr;
     rv32::word mtime_rd_data;
     logic [63:0] time_rd_data;  // unprivileged alias
-    logic mtime_int;
+    logic mtime_interrupt;
     // Exceptions
     logic inst_access_fault;
     logic inst_misaligned;
@@ -160,59 +146,59 @@ module core #(
     // BEGIN: Memory Bus Instantiations
     ////////////////////////////////////////////////////////////
     ibus #(
-            .ROM_ADDR_WIDTH(ROM_ADDR_WIDTH),
-            .ROM_BASE_ADDR(ROM_BASE_ADDR)
-        ) IBus_inst (
-            .rd_en(ibus_rd_en),
-            .addr(ibus_addr),
-            .rom_rd_data(rom_rd_data1),
-            .rom_rd_en(rom_rd_en1),
-            .rom_addr(rom_addr1),
-            .rd_data(ibus_rd_data),
-            .inst_access_fault
-        );
+        .ROM_ADDR_WIDTH(ROM_ADDR_WIDTH),
+        .ROM_BASE_ADDR(ROM_BASE_ADDR)
+    ) IBUS (
+        .rd_en(ibus_rd_en),
+        .addr(ibus_addr),
+        .rom_rd_data(rom_rd_data1),
+        .rom_rd_en(rom_rd_en1),
+        .rom_addr(rom_addr1),
+        .rd_data(ibus_rd_data),
+        .inst_access_fault
+    );
     dbus #(
-            .ROM_ADDR_WIDTH(ROM_ADDR_WIDTH),
-            .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
-            .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
-            .ROM_BASE_ADDR(ROM_BASE_ADDR),
-            .RAM_BASE_ADDR(RAM_BASE_ADDR),
-            .MTIME_BASE_ADDR(MTIME_BASE_ADDR),
-            .AXI_BASE_ADDR(AXI_BASE_ADDR),
-            .USE_MTIME(USE_MTIME),
-            .USE_AXI(USE_AXI)
-        ) DBus_inst (
-            .rd_en(dbus_rd_en),
-            .wr_en(dbus_wr_en),
-            .addr(dbus_addr),
-            .wr_data_i(dbus_wr_data),
-            .wr_strobe_i(dbus_wr_strobe),
-            .rom_rd_data(rom_rd_data2),
-            .ram_rd_data,
-            .mtime_rd_data,
-            .axi_rd_data,
-            .axi_access_fault,
-            .axi_busy,
-            .rd_data(dbus_rd_data),
-            .rom_rd_en(rom_rd_en2),
-            .rom_addr(rom_addr2),
-            .ram_rd_en,
-            .ram_wr_en,
-            .ram_addr,
-            .mtime_rd_en,
-            .mtime_wr_en,
-            .mtime_addr,
-            .axi_rd_en,
-            .axi_wr_en,
-            .axi_addr,
-            .wr_data_o(wr_data),
-            .wr_strobe_o(wr_strobe),
-            .data_misaligned,
-            .data_access_fault,
-            .load_store_n,
-            .dbus_wait,
-            .dbus_err
-        );
+        .ROM_ADDR_WIDTH(ROM_ADDR_WIDTH),
+        .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
+        .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
+        .ROM_BASE_ADDR(ROM_BASE_ADDR),
+        .RAM_BASE_ADDR(RAM_BASE_ADDR),
+        .MTIME_BASE_ADDR(MTIME_BASE_ADDR),
+        .AXI_BASE_ADDR(AXI_BASE_ADDR)
+    ) DBUS (
+        .clk,
+        .rst_n,
+        .rd_en(dbus_rd_en),
+        .wr_en(dbus_wr_en),
+        .addr(dbus_addr),
+        .wr_data_i(dbus_wr_data),
+        .wr_strobe_i(dbus_wr_strobe),
+        .rom_rd_data(rom_rd_data2),
+        .ram_rd_data,
+        .mtime_rd_data,
+        .axi_rd_data,
+        .axi_access_fault,
+        .axi_busy,
+        .rd_data(dbus_rd_data),
+        .rom_rd_en(rom_rd_en2),
+        .rom_addr(rom_addr2),
+        .ram_rd_en,
+        .ram_wr_en,
+        .ram_addr,
+        .mtime_rd_en,
+        .mtime_wr_en,
+        .mtime_addr,
+        .axi_rd_en,
+        .axi_wr_en,
+        .axi_addr,
+        .wr_data_o(wr_data),
+        .wr_strobe_o(wr_strobe),
+        .data_misaligned,
+        .data_access_fault,
+        .load_store_n,
+        .dbus_wait,
+        .dbus_err
+    );
     ////////////////////////////////////////////////////////////
     // END: Memory Bus Instantiations
     ////////////////////////////////////////////////////////////
@@ -225,25 +211,25 @@ module core #(
     ////////////////////////////////////////////////////////////
     // BEGIN: PC and Register File Instantiations
     ////////////////////////////////////////////////////////////
-    pc PC_inst (
-            .clk,
-            .rst_n,
-            .next_pc,
-            .pc
-        );
-    regfile RegFile_inst (
-            .clk,
-            .rs1_en,
-            .rs2_en,
-            .dest_en,
-            .rs1_addr,
-            .rs2_addr,
-            .dest_addr,
-            .rs1_data,
-            .rs2_data,
-            .dest_data
-        );
-    ////////////////////////////////////////////////////////////
+    pc PC (
+        .clk,
+        .rst_n,
+        .next_pc,
+        .pc
+    );
+    regfile REGFILE (
+        .clk,
+        .rs1_en,
+        .rs2_en,
+        .rs1_addr,
+        .rs2_addr,
+        .rs1_data,
+        .rs2_data,
+        .dest_en,
+        .dest_addr,
+        .dest_data
+    );
+        ////////////////////////////////////////////////////////////
     // END: PC and Register File Instantiations
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
@@ -257,67 +243,64 @@ module core #(
     ////////////////////////////////////////////////////////////
     fetch Fetch_inst (
             .pc,
-            .ibus_rd_en,
-            .ibus_addr,
-            .ibus_rd_data,
-            .inst
+        .ibus_rd_en,
+        .ibus_addr,
+        .ibus_rd_data,
+        .inst
         );
-    decoder #(
-            .USE_CSR(USE_CSR),
-            .USE_TRAP(USE_TRAP)
-        ) Decoder_inst (
-            .inst,
-            .pc,
-            .rs1_data,
-            .rs2_data,
-            .csr_rd_data,
-            .alu_zero,
-            .rs1_en,
-            .rs2_en,
-            .rs1_addr,
-            .rs2_addr,
-            .csr_rd_en,
-            .csr_explicit_rd,
-            .csr_addr,
-            .src1,
-            .src2,
-            .alt_data,
-            .alu_op,
-            .lsu_op,
-            .dest_addr,
-            .next_pc(decoder_next_pc),
-            .illegal_inst,
-            .inst_misaligned,
-            .ecall,
-            .ebreak,
-            .mret
-        );
-    alu ALU_inst (
-            .src1,
-            .src2,
-            .alu_op,
-            .result(alu_result),
-            .zero(alu_zero)
-        );
-    lsu LSU_inst (
-            .lsu_op,
-            .alu_result,
-            .alt_data,
-            .dest_addr,
-            .dbus_rd_data,
-            .dbus_wait,
-            .dbus_err,
-            .endianness,
-            .dest_en,
-            .dest_data,
-            .dbus_rd_en,
-            .dbus_wr_en,
-            .dbus_addr,
-            .dbus_wr_data,
-            .dbus_wr_strobe,
-            .csr_wr_en,
-            .csr_wr_data
-        );
+    decoder DECODER (
+        .inst,
+        .pc,
+        .rs1_data,
+        .rs2_data,
+        .csr_rd_data,
+        .alu_zero,
+        .rs1_en,
+        .rs2_en,
+        .rs1_addr,
+        .rs2_addr,
+        .csr_rd_en,
+        .csr_explicit_rd,
+        .csr_addr,
+        .src1,
+        .src2,
+        .alt_data,
+        .alu_op,
+        .lsu_op,
+        .dest_addr,
+        .next_pc(decoder_next_pc),
+        .illegal_inst,
+        .inst_misaligned,
+        .ecall,
+        .ebreak,
+        .mret
+    );
+    alu ALU (
+        .src1,
+        .src2,
+        .alu_op,
+        .result(alu_result),
+        .zero(alu_zero)
+    );
+    lsu LSU (
+        .lsu_op,
+        .alu_result,
+        .alt_data,
+        .dest_addr,
+        .dbus_rd_data,
+        .dbus_wait,
+        .dbus_err,
+        .endianness,
+        .dest_en,
+        .dest_data,
+        .dbus_rd_en,
+        .dbus_wr_en,
+        .dbus_addr,
+        .dbus_wr_data,
+        .dbus_wr_strobe,
+        .csr_wr_en,
+        .csr_wr_data
+    );
     ////////////////////////////////////////////////////////////
     // END: Fetch, Decoder, ALU, LSU, Register File Instantiations
     ////////////////////////////////////////////////////////////
@@ -328,45 +311,32 @@ module core #(
 
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
-    // BEGIN: Optional CSR Instantiation
+    // BEGIN: CSR Instantiation
     ////////////////////////////////////////////////////////////
-    generate
-    if (USE_CSR) begin : gen_csr
-        csr #(
-                .HART_ID(HART_ID)
-            ) CSR_inst (
-                .clk,
-                .rst_n,
-                .rd_en(csr_rd_en),
-                .explicit_rd(csr_explicit_rd),
-                .wr_en(csr_wr_en),
-                .addr(csr_addr),
-                .rd_data(csr_rd_data),
-                .wr_data(csr_wr_data),
-                .trap_rd_en,
-                .trap_wr_en,
-                .trap_rd_data,
-                .time_rd_data,
-                .global_mie,
-                .endianness,
-                .illegal_csr,
-                .dbus_wait,
-                .mret,
-                .trap
-            );
-    end // if (USE_CSR)
-    else begin
-        assign csr_rd_data = 0;
-        assign global_mie = 0;
-        assign trap_rd_en = 0;
-        assign trap_wr_en = 0;
-        assign trap_wr_data = 0;
-        assign endianness = 0; // little-endian
-        assign illegal_csr = 0;
-    end // if (!USE_CSR)
-    endgenerate
+    csr #(
+        .HART_ID(HART_ID)
+    ) CSR (
+        .clk,
+        .rst_n,
+        .rd_en(csr_rd_en),
+        .explicit_rd(csr_explicit_rd),
+        .wr_en(csr_wr_en),
+        .addr(csr_addr),
+        .rd_data(csr_rd_data),
+        .wr_data(csr_wr_data),
+        .trap_rd_en,
+        .trap_wr_en,
+        .trap_rd_data,
+        .time_rd_data,
+        .global_mie,
+        .endianness,
+        .illegal_csr,
+        .dbus_wait,
+        .mret,
+        .trap
+    );
     ////////////////////////////////////////////////////////////
-    // END: Optional CSR Instantiation
+    // END: CSR Instantiation
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
 
@@ -375,60 +345,51 @@ module core #(
 
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
-    // BEGIN: Optional Trap Unit Instantiation
+    // BEGIN: Trap Unit Instantiation
     ////////////////////////////////////////////////////////////
-    generate
-    if (USE_TRAP) begin : gen_trap
-        trap #(
-                .RESET_ADDR(RESET_ADDR)
-            ) TRAP_inst (
-                .clk,
-                .rst_n,
-                .pc,
-                .decoder_next_pc,
-                .global_mie,
-                .csr_rd_en(trap_rd_en),
-                .csr_wr_en(trap_wr_en),
-                .csr_addr,
-                .csr_wr_data,
-                .mret,
-                .dbus_wait,
-                .inst_access_fault,
-                .inst_misaligned,
-                .illegal_inst,
-                .illegal_csr,
-                .inst,
-                .ecall,
-                .ebreak,
-                .data_misaligned,
-                .data_access_fault,
-                .load_store_n,
-                .data_addr(alu_result),
-                .mtime_int,
-                .gpioa_int_0,
-                .gpioa_int_1,
-                .gpiob_int_0,
-                .gpiob_int_1,
-                .gpioc_int_0,
-                .gpioc_int_1,
-                .uart0_rx_int,
-                .uart0_tx_int,
-                .timer0_int,
-                .timer1_int,
-                .next_pc,
-                .csr_rd_data(trap_rd_data),
-                .exception,
-                .trap
-            );
-    end // if (USE_TRAP)
-    else begin
-        assign next_pc = (dbus_wait) ? pc : decoder_next_pc;
-        assign trap_rd_data = 0;
-        assign trap = 0;
-    end // if/else (USE_TRAP)
-    endgenerate
+    trap #(
+        .RESET_ADDR(RESET_ADDR)
+    ) TRAP (
+        .clk,
+        .rst_n,
+        .pc,
+        .decoder_next_pc,
+        .global_mie,
+        .csr_rd_en(trap_rd_en),
+        .csr_wr_en(trap_wr_en),
+        .csr_addr,
+        .csr_wr_data,
+        .mret,
+        .dbus_wait,
+        .inst_access_fault,
+        .inst_misaligned,
+        .illegal_inst,
+        .illegal_csr,
+        .inst,
+        .ecall,
+        .ebreak,
+        .data_misaligned,
+        .data_access_fault,
+        .load_store_n,
+        .data_addr(alu_result),
+        .mtime_int,
+        .gpioa_int_0,
+        .gpioa_int_1,
+        .gpiob_int_0,
+        .gpiob_int_1,
+        .gpioc_int_0,
+        .gpioc_int_1,
+        .uart0_rx_int,
+        .uart0_tx_int,
+        .timer0_int,
+        .timer1_int,
+        .next_pc,
+        .csr_rd_data(trap_rd_data),
+        .exception,
+        .trap
+    );
     ////////////////////////////////////////////////////////////
-    // END: Optional Trap Unit Instantiation
+    // END: Trap Unit Instantiation
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
 
@@ -437,30 +398,21 @@ module core #(
 
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
-    // BEGIN: Optional Machine Timer Instantiation
+    // BEGIN: Machine Timer Instantiation
     ////////////////////////////////////////////////////////////
-    generate
-    if (USE_MTIME) begin : gen_mtime
-        mtime MTIME_inst (
-                .clk,
-                .rst_n,
-                .rd_en(mtime_rd_en),
-                .wr_en(mtime_wr_en),
-                .addr(mtime_addr),
-                .wr_data,
-                .wr_strobe,
-                .rd_data(mtime_rd_data),
-                .interrupt(mtime_int)
-            );
-    end // if (USE_MTIME)
-    else begin
-    end // if/else (USE_MTIME)
-        assign mtime_rd_data = 0;
-        assign time_rd_data = 0;
-        assign mtime_int = 0;
-    endgenerate
+    mtime MTIME (
+        .clk,
+        .rst_n,
+        .rd_en(mtime_rd_en),
+        .wr_en(mtime_wr_en),
+        .addr(mtime_addr),
+        .wr_data,
+        .wr_strobe,
+        .rd_data(mtime_rd_data),
+        .interrupt(mtime_interrupt)
+    );
     ////////////////////////////////////////////////////////////
-    // END: Optional Machine Timer Instantiation
+    // END: Machine Timer Instantiation
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
 

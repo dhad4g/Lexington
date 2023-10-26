@@ -5,10 +5,7 @@
 import lexington::*;
 
 
-module decoder #(
-        parameter USE_CSR       = 1,                // CSR instructions can be disables
-        parameter USE_TRAP      = 1                 // enable generation of the Trap Unit (requires CSR)
-    ) (
+module decoder (
         // clock not needed; module is purely combinatorial
         // reset not needed; module is stateless
 
@@ -18,10 +15,10 @@ module decoder #(
 
         // Register File Ports
         output logic rs1_en,                        // register source 1 enable
-        output rv32::reg_addr_t rs1_addr,           // register source 1 address
+        output rv32::gpr_addr_t rs1_addr,           // register source 1 address
         input  rv32::word rs1_data,                 // register source 1 data
         output logic rs2_en,                        // register source 2 enable
-        output rv32::reg_addr_t rs2_addr,           // register source 2 address
+        output rv32::gpr_addr_t rs2_addr,           // register source 2 address
         input  rv32::word rs2_data,                 // register source 2 data
 
         // CSR Ports
@@ -39,7 +36,7 @@ module decoder #(
         // Load/Store Ports
         output lsu_op_t lsu_op,                     // LSU operation select
         output rv32::word alt_data,                 // LSU alternate data
-        output rv32::reg_addr_t dest_addr,          // LSU destination register address
+        output rv32::gpr_addr_t dest_addr,          // LSU destination register address
 
         // Exception Flags
         output logic illegal_inst,                  // illegal instruction flag
@@ -439,25 +436,16 @@ module decoder #(
                         illegal_inst = 1;
                     end
                     else begin
-                        if (USE_TRAP) begin
-                            case (funct12)
-                                FUNCT12_ECALL:  ecall = 1;
-                                FUNCT12_EBREAK: ebreak = 1;
-                                FUNCT12_MRET:   mret = 1;
-                                FUNCT12_WFI:    ; // NOP
-                                default:        illegal_inst = 1;
-                            endcase
-                        end
-                        else begin
-                            case (funct12)
-                                FUNCT12_EBREAK: ebreak = 1;     // leave for simulation verification purposes
-                                FUNCT12_WFI:    ; // NOP
-                                default:        illegal_inst = 1;
-                            endcase
-                        end
+                        case (funct12)
+                            FUNCT12_ECALL:  ecall = 1;
+                            FUNCT12_EBREAK: ebreak = 1;
+                            FUNCT12_MRET:   mret = 1;
+                            FUNCT12_WFI:    ; // NOP
+                            default:        illegal_inst = 1;
+                        endcase
                     end
                 end // if (funct3 == 3'b000)
-                else if (USE_CSR) begin
+                else begin
                     // CSR Instructions
                     rs1_en          = (funct3[2]) ? 0 : 1;
                     rs2_en          = 0;
@@ -505,18 +493,6 @@ module decoder #(
                             illegal_inst = 1;
                         end
                     endcase
-                end // if (USE_CSR) begin
-                else begin
-                    rs1_en = 0;
-                    rs2_en = 0;
-                    csr_rd_en = 0;
-                    csr_explicit_rd = 0;
-                    src1 = 0;
-                    src2 = 0;
-                    alt_data = 0;
-                    alu_op = ALU_NOP;
-                    lsu_op = LSU_NOP;
-                    illegal_inst = 1;
                 end
             end
             ////////////////////////////////////////////////////////////

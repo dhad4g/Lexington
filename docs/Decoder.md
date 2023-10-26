@@ -5,12 +5,12 @@ It uses purely combinatorial logic.
 
 ## Ports
 
-#### Parameters
+### Parameters
 
 - **`XLEN = 32`** data width (from rv32)
 - **`USE_CSR = 1`** enable support for CSR instructions
 
-#### Inputs
+### Inputs
 
 - **`inst[XLEN-1:0]`** instruction from fetch
 - **`pc[XLEN-1:0]`** current program counter
@@ -20,7 +20,7 @@ It uses purely combinatorial logic.
 - **`alu_zero`** zero flag from ALU
 - **`dbus_wait`** waiting for data bus flag
 
-#### Outputs
+### Outputs
 
 - **`rs1_en`** read enable for register file read 1
 - **`rs2_en`** read enable for register file read 2
@@ -48,7 +48,7 @@ It uses purely combinatorial logic.
 The decoder receives the ISA binary instruction from the Instruction Fetch Unit and decodes it to the microarchitecture control signals.
 ALU microarchitecture opcodes are found in the [ALU](./ALU.md) documentation.
 
-### Supported Instructions
+### Instruction Format
 
 All instructions have a 7-bit major op code positioned as the least-significant bits.
 Other bits are instruction specific, but are mostly similar following the formats shown in Figure 1.
@@ -59,7 +59,7 @@ Note that all formats place the MSB/sign-bit at the same location.
 ![](./figures/instructions/instruction_formats.png) \
 **Figure 1.** RISC-V base instruction formats
 
-#### Arithmetic and Logic Instructions
+### Arithmetic and Logic Instructions
 
 **Major Op Codes**
 
@@ -110,7 +110,7 @@ The immediate variant shift instructions use `imm[4:0]` to encode the unsigned s
 
 <br>
 
-#### Upper Immediate Instructions
+### Upper Immediate Instructions
 
 **Major Op Codes**
 
@@ -129,7 +129,7 @@ It adds the 20-bit upper-immediate value to the current PC then stores it in the
 
 <br>
 
-#### Unconditional Jump Instructions
+### Unconditional Jump Instructions
 
 **Major Op Codes**
 
@@ -163,7 +163,7 @@ The least-significant bit of the result is always set to zero, forcing two-byte 
 
 <br>
 
-#### Conditional Branch Instructions
+### Conditional Branch Instructions
 
 **Major Op Code**
 
@@ -202,7 +202,7 @@ If the condition of the specific instruction is met, then the PC is set to the c
 
 <br>
 
-#### Load/Store Instructions
+### Load/Store Instructions
 
 **Major Op Code**
 
@@ -251,7 +251,7 @@ No sign-extension or zero padding is performed and only the associated number of
 
 <br>
 
-#### Memory Ordering Instructions
+### Memory Ordering Instructions
 
 **Major Op Code**
 
@@ -282,7 +282,7 @@ This is typically used in self-modifying code to flush the instruction cache.
 
 <br>
 
-#### CSR Instruction
+### CSR Instruction
 
 **Major Op Code**
 
@@ -334,7 +334,7 @@ Likewise, for `CSRRSI` and `CSRRCI`, if the immediate value is zero, then CSR wr
 
 <br>
 
-#### System Instructions
+### System Instructions
 
 **Major Op Code**
 
@@ -344,23 +344,27 @@ Likewise, for `CSRRSI` and `CSRRCI`, if the immediate value is zero, then CSR wr
 
 *Note: CSR instructions are in the [CSR Instruction](#csr-instruction) section*
 
-This implementation implements three system instructions.
-Their details are shown in Table 5.
+This implementation implements four system instructions. Their details are shown
+in Table 5.
 
-The environment call `ECALL` instruction generates an environment-call-from-M-mode exception.
+The environment call `ECALL` instruction generates an environment-call-from-M-mode
+exception.
 
-The environment break `EBREAK` instruction generates a breakpoint exception.
-This implementation does not feature a hardware debug module.
+The environment break `EBREAK` instruction generates a breakpoint exception. This
+implementation does not feature a hardware debug module.
 
-*Note: the `ECALL` and `EBREAK` instructions are unique in that they set the `mepc` CSR to the address of **this** instruction.
-Additionally, these instructions do not increment the `minstret` CSR.*
+**Important:** the `ECALL` and `EBREAK` instructions are unique in that they
+set the `mepc` CSR to the address of **this** instruction. Additionally, these
+instructions do not increment the `minstret` CSR.
 
 ![](./figures/instructions/environment_encoding.png) \
 **Figure 14.** Environment instruction encoding
 
-The machine-mode trap return `MRET` instructions sets the `pc` the value stored in `mepc`.
-This is handled by the [Trap Unit](./Trap.md).
-The decoder is responsible for raising the `mret` flag when this instruction is executed.
+The machine-mode trap return `MRET` instructions sets the `pc` the value stored
+in `mepc`. This is handled by the [Trap Unit](./Trap.md). The decoder is
+responsible for raising the `xret` flag when this instruction is executed. Unlike
+the `ECALL` and `EBREAK` instructions, `MRET` does increment `minstret` as it does
+not generate an exception.
 
 ![](figures/instructions/xret_encoding.png) \
 **Figure 15.** Trap-return instruction encoding

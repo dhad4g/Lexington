@@ -1,6 +1,7 @@
-//depend lexington_soc.sv
+//depend soc.sv
 //depend core.sv
 //depend core/*.sv
+//depend core/pipeline/*.sv
 //depend mem/rom.sv
 //depend mem/ram.sv
 //depend axi4_lite_manager.sv
@@ -9,7 +10,7 @@
 `timescale 1ns/1ps
 
 
-// Top module for implementing Lexington CPU on the Digilent Basys3
+// Top module for implementing Saratoga CPU on the Digilent Basys3
 module top (
 
     // Clock signal
@@ -62,7 +63,12 @@ module top (
     logic [15:0] gpiob;
     logic [15:0] gpioc;
 
-    assign rst = btnC;
+    // Register reset button due to sub-optimal I/O pin
+    // avoids ERROR:[Place 30-574]
+    always_ff @(posedge clk) begin
+        rst <= btnC;
+    end
+
     assign rst_n = ~rst;
     assign gpioa = led;
     assign gpiob = sw;
@@ -74,14 +80,14 @@ module top (
     assign gpioc[15] = btnD;
 
 
-    lexington_soc #(
+    soc #(
         .CLK_PERIOD(20.0)
-    ) cpu (
+    ) SOC (
         .clk(core_clk),
-        .rst_n,
-        .gpioa,
-        .gpiob,
-        .gpioc
+        .rst_n(rst_n),
+        .gpioa(gpioa),
+        .gpiob(gpiob),
+        .gpioc(gpioc)
     );
 
 
