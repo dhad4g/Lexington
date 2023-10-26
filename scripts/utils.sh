@@ -9,8 +9,24 @@ NORMAL="\x1b[0m"
 SUCCESS_FORMAT="s,(PASS(ED)?|SUCCESS(FULLY?)?),$GREEN\1$NORMAL,I" # highlight green
 WARN_FORMAT="s,(.*WARN.*),$YELLOW\1$NORMAL,I" # highlight yellow
 ERROR_FORMAT="s,(.*(FAIL|ERROR).*),$RED\1$NORMAL,I" # highlight red
-ERROR2_FORMAT="s,((FAIL|ERROR):?)(\s)(.*/)([^/]+\.s?v((.?\sLine)?:?\s?[0-9]+)?)(.*),$RED\1\3$BLUE\5$RED\3\4\5\8$NORMAL,I" # display filename and line at beginning
-OUT_FORMAT="sed -E $SUCCESS_FORMAT;$WARN_FORMAT;$ERROR_FORMAT;$ERROR2_FORMAT"
+# ERROR2_FORMAT="s,((FAIL|ERROR):?)(\s)(.*/)([^/]+\.s?v((.?\sLine)?:?\s?[0-9]+)?)(.*),$RED\1\3$BLUE\5$RED\3\4\5\8$NORMAL,I" # display filename and line at beginning
+ ERROR2_FORMAT="s,((FAIL|ERROR):?)(\s)(.*/)([^/]+\.s?v((.?\sLine)?:?\s?[0-9]+)?)(.*),$RED\1\3$RED\3\4$YELLOW\5$RED\8$NORMAL,I" # highlight filename and line
+_FORMATS="$SUCCESS_FORMAT;$WARN_FORMAT;$ERROR_FORMAT;$ERROR2_FORMAT;"
+OUT_FORMAT="sed -E $_FORMATS"
+function out_format () {
+    $OUT_FORMAT
+}
+
+
+# File path conversions
+function win_to_wsl_path() {
+    # non-windows paths will not be modified
+    echo "$@" | sed -E 's,\\,/,g;s,C\://?,/mnt/c/,g'
+}
+function wsl_to_win_path() {
+    # replaces '/mnt/c' with 'C:/'
+    echo "$@" | sed -E 's,/mnt/c/,C\:/,g'
+}
 
 
 # Function for WSL support
@@ -18,9 +34,12 @@ function special_exec () {
     echo "$@"
     which powershell.exe > /dev/null
     if [ "$?" == "0" ]; then
-        args=$(echo "$@" | sed -e 's,/mnt/c/,C:/,g')
+        args=$(wsl_to_win_path "$@")
         "/mnt/c/Program Files/Git/bin/bash.exe" -c "$args"
-        return $?
+        rval=$?
+        if [ "$rval" != "0" ]; then
+            exit $rval
+        fi
     else
         $@
     fi
@@ -29,7 +48,7 @@ function special_exec () {
 
 # Parse dependencies
 #   args: <src file> [DIR_PREFIX]
-#   returns: rval variabel set to space separated list of dependencies
+#   returns: rval variable set to space separated list of dependencies
 function parse_depends () {
     if [ $# -lt 1 ]; then
         >$2 echo "Dependency parser function requires source file as argument"
@@ -76,7 +95,7 @@ function exec_macro_cmds () {
         if [ "$rval" != "0" ]; then
             >&2 echo -e "${RED}FAIL: User command failed with exit code $rval"
             >&2 echo
-            return $rval
+            exit $rval
         fi
     done
     echo

@@ -2,7 +2,7 @@
 
 The CSR module is responsible for CSR reads and writes as well as CSR specific behaviors.
 It raises an illegal instruction exception is raised in the following cases:
-- Read or write to an invalid CSR address
+- Read or write to an invalid CSR address or unprivileged access to a privileged CSR
 - Write to a read-only CSR
 
 The [`mip`](#machine-interrupt-pending-mip),
@@ -11,7 +11,9 @@ The [`mip`](#machine-interrupt-pending-mip),
 and [`mtval`](#machine-trap-value-register-mtval)
 CSRs are contained in the [Trap Unit](./Trap.md)
 
-For CSR instruction behavior, see the [Decoder CSR Instruction](./CSR.md#control-and-status-registers-csr) section.
+For CSR related instructions see the
+[CSR Instruction](./CSR.md#control-and-status-registers-csr) section of the
+Decode Unit.
 
 The CSR unit uses synchronous/clocked logic.
 However, trap CSR operations are delegated to the trap unit using combinatorial logic.
@@ -73,6 +75,7 @@ This implementation ignores illegal write values
 ### Machine ISA Register `misa`
 
 *0x301*
+$~~~~$ **Read-Only**
 
 The `misa` reports the ISA supported by the hart.
 This implementation makes this register read-only
@@ -82,7 +85,7 @@ Figure 1 shows the field encoding
 **Figure 1.** Field encoding for `misa`
 
 The two-bit `MXL` field encodes the native base integer ISA width as shown in Table 1.
-The value of `MXL` is 1 for the 32-bit GPro Lexington core.
+The value of `MXL` is 1 for the 32-bit GPro 1 (Lexington).
 
 **Table 1.** MXL bit field encoding
 
@@ -90,47 +93,55 @@ The value of `MXL` is 1 for the 32-bit GPro Lexington core.
 | --- | --- | --- | --- |
 | MXL | 1 | 2 | 3 |
 
-The Extensions field encodes the presence of standard ISA extensions.
-Each bit encodes one letter of the alphabet with bit 0 encoding the "A" extension and bit 25 encoding the "Z" extensions.
-The letter "X" denotes any non-standard extensions
-The only extension bit asserted in this implementation is bit eight, the "I" bit.
+The Extensions field encodes the presence of standard ISA extensions. Each bit
+encodes one letter of the alphabet with bit 0 encoding the "A" extension and
+bit 25 encoding the "Z" extensions. The letter "X" denotes any non-standard
+extensions The only extension bit asserted in this implementation is bit eight,
+the "I" bit.
 
 
 ### Machine Vendor ID Register `mvendorid`
 
 *0xF11*
+$~~~~$ **Read-Only**
 
-A read-only register encoding the JEDEC manufacturer ID.
-This implementation returns 0x0, indicating a non-comercial implementation.
+A read-only register encoding the JEDEC manufacturer ID. This implementation
+returns 0x0, indicating a non-comercial implementation.
 
 
 ### Machine Architecture ID Register `marchid`
 
 *0xF12*
+$~~~~$ **Read-Only**
 
-A read-only register encodes the base microarchitecture of this hart.
-This implementation returns 0x0, indicating no allocated architecture ID.
+A read-only register encodes the base microarchitecture of this hart. This
+implementation returns 0x0, indicating no allocated architecture ID.
 
 
 ### Machine Implementation ID Register `mimpid`
 
 *0xF13*
+$~~~~$ **Read-Only**
 
-This read-only register encodes the version of the processor implementation as a subset of the architecture ID.
-This implementation returns 0x1, indicating the first iteration of the GPro CPU.
+This read-only register encodes the version of the processor implementation as a
+subset of the architecture ID. This implementation returns 0x1, indicating the
+first iteration of the GPro CPU.
 
 
 ### Hart ID Register `mhartid`
 
 *0xF14*
+$~~~~$ **Read-Only**
 
-This read-only register encodes the execution environment unique, integer ID of the hardware thread.
-This implementation returns 0x0 as there is only one hardware thread in the GPro Lexington core.
+This read-only register encodes the execution environment unique, integer ID of
+the hardware thread. This implementation returns 0x0 as Saratoga only supports a
+single hardware thread.
 
 
 ### Machine Status Register `mstatus` and `mstatush`
 
 *0x300* and *0x310*
+$~~~~$ **Atomic**
 
 The read/write registers tracks and controls the hart's current operating state.
 Figures 2 and 3 show the encoding of `mstatus` and `mstatush` respectively.
@@ -149,14 +160,14 @@ Figures 2 and 3 show the encoding of `mstatus` and `mstatush` respectively.
 | 1     | SIE   | r/- | 1 | ~~Supervisor-mode interrupt enable~~ |
 | 3     | MIE   | r/w | 1 | Manager-mode interrupt enable |
 | 5     | SPIE  | r/- | 1 | ~~Supervisor-mode previous interrupt enable~~ |
-| 6     | UBE   | r/- | 0 | ~~User-mode data memory endianness~~
+| 6     | UBE   | r/w | 0 | User-mode data memory endianness (0=little,1=big)
 | 7     | MPIE  | r/w | 1 | Manager-mode previous interrupt enable |
 | 8     | SPP   | r/- | 0 | ~~Supervisor-mode previous privilege mode~~ |
 | 10:9  | VS    | r/- | 0 | ~~Vector extension state~~ |
-| 12:11 | MPP   | r/- | 3 | Manager-mode previous privilege mode |
+| 12:11 | MPP   | r/w | 3 | Manager-mode previous privilege mode |
 | 14:13 | FS    | r/- | 0 | ~~Floating-point unit state~~ |
 | 16:15 | XS    | r/- | 0 | ~~Additional user-mode extensions state~~ |
-| 17    | MPRV  | r/- | 0 | ~~Modify effective privilege~~ |
+| 17    | MPRV  | r/w | 0 | Modify effective privilege |
 | 18    | SUM   | r/- | 0 | ~~Permit supervisor user memory access~~ |
 | 19    | MXR   | r/- | 0 | ~~Make executable readable~~ |
 | 20    | TVM   | r/- | 0 | ~~Trap virtual memory~~ |
@@ -169,12 +180,14 @@ Figures 2 and 3 show the encoding of `mstatus` and `mstatush` respectively.
 When a trap is taken:
 - `MPIE` is set to `MIE`
 - `MIE` is set to 0
-- ~~`MPP` is set to 3 (i.e. machine-mode)~~ *Unused*
+- `MPP` is set to current privilege mode
 
-When an `MRET` instruction is executed:
+When an `xRET` instruction is executed:
+- privilege mode is set to `MPP`
 - `MIE` is set to `MPIE`
 - `MPIE` is set to 1
-- ~~`MPP` is set to 3 (i.e. machine-mode)~~ *Unused*
+- `MPP` is set to 0 (i.e. user-mode, lowest privilege)
+- If `MPP` is not M-Mode, then `MPRV` is set to 0
 
 
 ### Machine Trap-Vector Base-Address Register `mtvec`
@@ -183,10 +196,10 @@ When an `MRET` instruction is executed:
 
 ***Delegated to Trap Unit***
 
-This read/write register contains the address of the trap handler function.
-All addresses are forced to be 4-byte aligned and the address's 2 LSBs are ignored.
-The 2 LSBs of the `mtvec` register contain the addressing mode of the trap-vector table.
-The default value on reset is 0x0.
+This read/write register contains the address of the trap handler function. All
+addresses are forced to be 4-byte aligned and the address's 2 LSBs are ignored.
+The 2 LSBs of the `mtvec` register contain the addressing mode of the trap-vector
+table. The default value on reset is 0x0000_0000.
 
 ![](./figures/csr/mtvec.png) \
 **Figure 4.** Encoding of `mtvec`
@@ -201,14 +214,13 @@ The default value on reset is 0x0.
 
 If using direct mode, all exceptions and interrupts trap to PC = BASE.
 
-If using vectored mode, the 5 LSBs of BASE are zeroed, thus forcing 128-byte alignment of the trap-vector table.
-This allows interrupt causes 0-31 to use the vectored addressing mode.
-Interrupts causes $\ge$ 32 always use direct addressing.
-Exceptions always trap to PC = BASE.
-See the [`mcause` CSR](#machine-cause-register-mcause) for interrupt cause IDs
+If using vectored mode, the 5 LSBs of BASE are zeroed, thus forcing 128-byte
+alignment of the trap-vector table. This allows interrupt causes 0-31 to use the
+vectored addressing mode. Interrupts causes $\ge$ 32 always use direct addressing.
+Exceptions always trap to PC = BASE. See the
+[`mcause` CSR](#machine-cause-register-mcause) for interrupt cause IDs.
 
-Reset and NMIs always trap to address 0x0000_0000.
-
+Resets and NMIs always reset to the hardware defined RESET_ADDR (typically 0x0000_0000).
 
 ### Machine Interrupt Pending `mip`
 
@@ -216,19 +228,20 @@ Reset and NMIs always trap to address 0x0000_0000.
 
 ***Delegated to Trap Unit***
 
-This read/write register encodes pending interrupts.
-Bit *i* corresponds to interrupt cause number *i* as reported in CSR [`mcause`](#machine-cause-register-mcause).
-Pending interrupts are not cleared by hardware but must be cleared by software by clearing the corresponding bit.
-The exception are the standard interrupt bits.
+This read/write register encodes pending interrupts. Bit *i* corresponds to
+interrupt cause number *i* as reported in CSR [`mcause`](#machine-cause-register-mcause).
+Pending interrupts are not cleared by hardware but must be cleared by software
+by clearing the corresponding bit. The exception are the standard interrupt bits.
 
-Bits 15:0 encode the standard interrupt causes as shown in Table 4.
-These bits have unique behaviors such as being read-only.
-They must be cleared by resolving the interrupt source
-(ex. write [`mtimecmp[h]`](#machine-timer-registers-mtime-and-mtimecmp) $
-lt$ [`mtime[h]`](#machine-timer-registers-mtime-and-mtimecmp)).
+Bits 15:0 encode the standard interrupt causes as shown in Table 4. These bits
+have unique behaviors such as being read-only. They must be cleared by resolving
+the interrupt source (ex. write
+[`mtimecmp[h]`](#machine-timer-registers-mtime-and-mtimecmp) $\lt$ [`mtime[h]`](#machine-timer-registers-mtime-and-mtimecmp)).
 
-Additional interrupt sources are listed in the [`mcause`](#machine-cause-register-mcause) section.
-These bits are read/write and the bit must be cleared by software in the trap handler.
+Additional interrupt sources are listed in the [`mcause`](#machine-cause-register-mcause)
+section. These bits are read/write and the bit must be cleared by software in the
+trap handler. Some interrupt sources may also require that the source of the
+interrupt is resolved.
 
 See the [Trap Unit](./Trap.md) for detailed trap behavior.
 
@@ -260,11 +273,11 @@ See the [Trap Unit](./Trap.md) for detailed trap behavior.
 
 ***Delegated to Trap Unit***
 
-This read/write register encodes the enable for interrupts.
-Bit *i* corresponds to interrupt cause number *i* as reported in the [`mcause` CSR](#machine-cause-register-mcause).
-All bits are writable, even if the corresponding interrupt is not supported.
-The register is set to 0 at reset.
-See ['mip'](#machine-interrupt-pending-mip) for related information.
+This read/write register encodes the enable for interrupts. Bit *i* corresponds
+to interrupt cause number *i* as reported in the [`mcause` CSR](#machine-cause-register-mcause).
+All bits are writable, even if the corresponding interrupt is not supported. The
+register is set to 0 at reset. See ['mip'](#machine-interrupt-pending-mip) for
+related information.
 
 
 ### Machine Cycle Counter `mcycle` and `mcycleh`
@@ -272,6 +285,7 @@ See ['mip'](#machine-interrupt-pending-mip) for related information.
 *0xB00* and *0xB80*
 
 unprivileged: *0xC00* and *0xC80*
+$~~~~$ **Read-Only**
 
 Counts the number of clock cycles executed by this hart.
 A 64-bit, read/write register with value zero at reset.
@@ -293,6 +307,7 @@ again:
 *0xB02* and *0xB82*
 
 unprivileged: *0xC02* and *0xC82*
+$~~~~$ **Read-Only**
 
 Counts the number of instructions retired by this hart.
 A 64-bit read-write register with value zero at reset.
@@ -326,9 +341,12 @@ A general-purpose read/write register for use by machine mode.
 
 ***Delegated to Trap Unit***
 
-This read/write register holds the address of instruction that was interrupted or caused an exception when a trap is encountered in machine mode.
+This read/write register holds the address of instruction that was interrupted
+or caused an exception when a trap is encountered in machine mode. This
+implementation uses `IALIGN`=32 and thus the least significant two bits are
+always zero and write values to these bits are ignored.
+
 See the [Trap Unit](./Trap.md) for detailed trap behavior.
-This implementation uses `IALIGN`=32 and thus the least significant two bits are always zero and write values to these bits are ignored.
 
 
 ### Machine Cause Register `mcause`
@@ -337,10 +355,10 @@ This implementation uses `IALIGN`=32 and thus the least significant two bits are
 
 ***Delegated to Trap Unit***
 
-This read/write register encodes the event type that caused a trap.
-Only legal values are allowed to be written.
-The MSB is asserted if this trap was caused by an interrupt.
-All other bits encode the trap type.
+This read/write register encodes the event type that caused a trap. Any XLEN
+value is allowed to be written to this register. The MSB is asserted if this
+trap was caused by an interrupt. All other bits encode the trap type.
+
 See the [Trap Unit](./Trap.md) for detailed trap behavior.
 
 **Table 6.** Interrupt trap codes
@@ -380,14 +398,15 @@ See the [Trap Unit](./Trap.md) for detailed trap behavior.
 | 8 | Environment call from U-mode |
 | 9 | Environment call from S-mode |
 | 11 | Environment call from M-mode |
-| 12 | Instruction page fault |
-| 13 | Load page fault |
-| 15 | Store/AMO page fault |
+| 12 | ~~Instruction page fault~~ |
+| 13 | ~~Load page fault~~ |
+| 15 | ~~Store/AMO page fault~~ |
 
 
 ### Machine Trap Value Register `mtval`
 
 *0x343*
+
 
 ***Delegated to Trap Unit***
 
@@ -398,15 +417,17 @@ See the [Trap Unit](./Trap.md) for details.
 ### Machine Configuration Pointer Register `mconfigptr`
 
 *0xF15*
+$~~~~$ **Read-Only**
 
-This is a read-only zero register indicating that a configuration data structure does not exist.
+This is a read-only zero register indicating that a configuration data structure
+does not exist.
 
 ### Machine Timer Registers `mtime` and `mtimecmp`
 
-***Delegated to mtime Unit***
+These are 64-bit, memory-mapped registers. `mtime` and `mtimeh` are also available
+as read-only, unprivileged CSRs `time` and `timeh` respectively.
 
-These are 64-bit, memory-mapped registers.
-`mtime` and `mtimeh` are also available as read-only, unprivileged CSRs `time` and `timeh` respectively.
+**Table 8.** Machine Timer Register Addresses
 
 | Address | Name |
 | --- | --- |

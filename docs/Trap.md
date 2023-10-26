@@ -4,18 +4,21 @@ The Trap Unit manages exceptions and interrupts.
 Reset conditions are also handles by the trap unit.
 This implementation uses purely combinatorial logic, except for trap CSRs.
 
-This document uses the RISC-V Specification definitions of *trap*, *exception*, and *interrupt*.
-- *trap*: the synchronous transfer of control to a trap handler caused by an *exception* or *interrupt*
-- *exception*: an unusual condition occurring at run time associated with an instruction in the current hart.
+This document uses the RISC-V Specification definitions of *trap*, *exception*,
+and *interrupt*.
+- *trap*: the synchronous transfer of control to a trap handler caused by an
+  *exception* or *interrupt*
+- *exception*: an unusual condition occurring at run time associated with an
+  instruction in the current hart.
 - *interrupt*: an external event that occurs asynchronously to the current hart.
 
 ## Ports
 
 ### Parameters
 
-- **`WIDTH=32`** data width
 - **`CSR_ADDR_WIDTH=12`** CSR address width
 - **`RESET_ADDR=0x0000_0000`** program counter reset/boot address
+- **`XLEN=32`** data width
 
 ### Inputs
 
@@ -29,6 +32,8 @@ This document uses the RISC-V Specification definitions of *trap*, *exception*, 
 - **`mret`** machine-mode return flag
 - **`dbus_wait`** flag indicating dbus transaction requires extra cycle
   
+- **`clk`** core clock
+- **`rst_n`** active-low reset
 *exception flags*
 - **`inst_access_fault`** instruction access fault flag, from fetch
 - **`inst_misaligned`** instruction address misaligned flag, from Decode
@@ -77,15 +82,16 @@ Exception priority is in Table 1.
 
 **Table 1.** Exception priority
 
-| Priority | Trap Code | Description |
-| --- | --- | --- |
-| *Highest* | 3 | Instruction address breakpoint |
-| | 1 | Instruction access fault |
-| | 2<br>0<br>8, 9, 11<br>3<br>3 | Illegal instruction<br>Instruction address misaligned<br>Environment call<br>Environment break<br>Load/store/AMO address breakpoint |
-| | 4, 6 | Load/store/AMO address misaligned |
-| *Lowest* | 5, 7 | Load/store/AMO access fault |
+| Priority | Trap Code | Description | Pipeline Stage |
+| --- | --- | --- | --- |
+| *Highest* | 3 | ~~Instruction address breakpoint~~ |
+| | 1 | Instruction access fault | Fetch Stage
+| | 2<br>0<br>8, 9, 11<br>3<br>3 | Illegal instruction<br>Instruction address misaligned<br>Environment call<br>Environment break<br>~~Load/store/AMO address breakpoint~~ | Decode Stage
+| | 4, 6 | Load/store/AMO address misaligned | Execute Stage
+| *Lowest* | 5, 7 | Load/store/AMO access fault | Execute Stage
 
 Exceptions always have priority over interrupts.
+<br>
 
 *Note: instruction address misaligned exceptions are raised by control-flow instructions with misaligned targets, rather than by the act of fetching an instruction*
 

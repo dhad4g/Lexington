@@ -40,7 +40,7 @@ module trap #(
         input  logic ebreak,
 
         // Interrupts
-        input  logic mtime_int,
+        input  logic mtime_interrupt,
         input  logic uart0_rx_int,
         input  logic uart0_tx_int,
         input  logic timer0_int,
@@ -60,7 +60,9 @@ module trap #(
 
         // Global Exception and Trap Flags
         output logic exception,
-        output logic trap
+        output logic trap,
+
+        input  rv32::priv_mode_t priv
     );
 
     // CSRs
@@ -79,20 +81,33 @@ module trap #(
     rv32::word mtvec_base_vectored;
     assign mtvec_base_vectored = {mtvec[31:7], 7'b0};
 
-    // MIP standard interrupt causes read-only
-    // assign mip.reserved15_12 = 0;
-    // assign mip.MEI = 0;
-    // assign mip.reserved10 = 0;
-    // assign mip.SEI = 0;
-    // assign mip.reserved8 = 0;
-    // assign mip.MTI = mtime_int;
-    // assign mip.reserved6 = 0;
-    // assign mip.STI = 0;
-    // assign mip.reserved4 = 0;
-    // assign mip.MSI = 0;
-    // assign mip.reserved2 = 0;
-    // assign mip.SSI = 0;
-    // assign mip.reserved0 = 0;
+    // MIP
+    assign mip.reserved15_12 = 0;
+    assign mip.reserved10 = 0;
+    assign mip.reserved8 = 0;
+    assign mip.reserved6 = 0;
+    assign mip.reserved4 = 0;
+    assign mip.reserved2 = 0;
+    assign mip.reserved0 = 0;
+    assign mip.MEI = 0;
+    assign mip.SEI = 0;
+    assign mip.MTI = mtime_interrupt;
+    assign mip.STI = 0;
+    assign mip.MSI = 0;
+    assign mip.SSI = 0;
+    // MIE
+    assign mie.reserved15_12 = 0;
+    assign mie.reserved10 = 0;
+    assign mie.reserved8 = 0;
+    assign mie.reserved6 = 0;
+    assign mie.reserved4 = 0;
+    assign mie.reserved2 = 0;
+    assign mie.reserved0 = 0;
+    assign mie.MEI = 0;
+    assign mie.SEI = 0;
+    assign mie.STI = 0;
+    assign mie.MSI = 0;
+    assign mie.SSI = 0;
     // mepc read-only
     assign mepc[1:0] = 0;
 
@@ -114,6 +129,8 @@ module trap #(
             _mcause     = -1;
         end
         else begin
+            rv32::word _interrupts;     // masked interrupts
+
             _mcause     = -1;
 
             // Set exception, trap, & _mcause
@@ -135,7 +152,9 @@ module trap #(
             else if (ecall) begin
                 exception   = 1;
                 trap        = 1;
-                _mcause     = rv32::TRAP_CODE_ENV_CALL_MMODE;
+                _mcause     = (priv == rv32::MMODE)
+                                ? rv32::TRAP_CODE_ENV_CALL_MMODE
+                                : rv32::TRAP_CODE_ENV_CALL_UMODE;
             end
             else if (ebreak) begin
                 exception   = 1;
@@ -158,13 +177,20 @@ module trap #(
                 exception   = 0;
                 trap        = 0;    // overwritten if interrupt trap occurs
                 _mcause     = 0;    // overwritten if interrupt trap occurs
-                if (global_mie) begin
-                    for (integer i=0; i<rv32::XLEN; i=i+1) begin
-                        if (mip[i] && mie[i]) begin
-                            trap    = 1;
-                            _mcause = i;
-                            break; // exit loop
-                        end
+                case (priv)
+                    rv32::MMODE: begin
+                        _interrupts = (global_mie) ? (mip & mie) : 0;
+                    end
+                    // rv32::SMODE: begin
+                    // end
+                    default: begin
+                        _interrupts = mip & mie;
+                    end
+                endcase
+                for (int i=rv32::XLEN-1; i>=0; i--) begin
+                    if (_interrupts[i]) begin
+                        trap    = 1;
+                        _mcause = i;
                     end
                 end
             end // interrupts
@@ -248,8 +274,9 @@ module trap #(
         if (!rst_n) begin
             _reset      <= 1;
             mtvec       <= 0;
-            mip[31:16]  <= 0;
-            mie         <= 0;
+            mip[rv32::XLEN-1:16] <= 0;
+            mie[rv32::XLEN-1:16] <= 0;
+            mie.MTI     <= 0;
             mepc[31:2]  <= 0;
             mcause      <= 0;
             mtval       <= 0;
@@ -264,13 +291,14 @@ module trap #(
                         mtvec <= csr_wr_data;
                     end
                     rv32::csr_addr_mip: begin
-                        mip[31:16] <= csr_wr_data[31:16];
+                        mip[rv32::XLEN-1:16] <= csr_wr_data[rv32::XLEN-1:16];
                     end
                     rv32::csr_addr_mie: begin
-                        mie <= csr_wr_data;
+                        mie[rv32::XLEN-1:16] <= csr_wr_data[rv32::XLEN-1:16];
+                        mie.MTI <= csr_wr_data[7];
                     end
                     rv32::csr_addr_mepc: begin
-                        mepc[31:2] <= csr_wr_data[31:2];
+                        mepc[rv32::XLEN-1:2] <= csr_wr_data[rv32::XLEN-1:2];
                     end
                     rv32::csr_addr_mcause: begin
                         mcause <= csr_wr_data;
@@ -294,9 +322,6 @@ module trap #(
                 end
                 else if (illegal_inst || illegal_csr) begin
                     mtval <= inst;
-                end
-                else if (ebreak) begin
-                    mtval <= pc;
                 end
                 else if (data_misaligned || data_access_fault) begin
                     mtval <= data_addr;

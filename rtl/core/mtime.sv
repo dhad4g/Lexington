@@ -82,7 +82,7 @@ module mtime #(
 
 
     // Cycle count logic
-    localparam CYCLES_PER_TICK = 1000 / CLK_PERIOD;     // 1 us / CLK_PERIOD (ns)
+    localparam integer CYCLES_PER_TICK = 1000 / CLK_PERIOD;     // 1 us / CLK_PERIOD (ns)
     assign tick = (counter == CYCLES_PER_TICK-1);
     always_ff @(posedge clk) begin
         if (!rst_n) begin

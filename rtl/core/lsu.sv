@@ -5,20 +5,18 @@
 import lexington::*;
 
 
-module lsu #(
-        
-    ) (
+module lsu (
         // clock not needed; module is purely combinatorial
         // reset not needed; module is combinatorial and stateless
 
         input lsu_op_t lsu_op,                                  // LSU operation select
         input rv32::word alu_result,                            // output from alu (data or mem addr)
         input rv32::word alt_data,                              // data source for store and CSR read instructions
-        input logic endianness,                                 // data memory endiannes select (0=little,1=big)
+        input logic endianness,                                 // data memory endianness select (0=little,1=big)
 
         // Register File write port
         output logic dest_en,                                   // register file write enable
-        input  rv32::reg_addr_t dest_addr,                      // destination register
+        input  rv32::gpr_addr_t dest_addr,                      // destination register
         output rv32::word dest_data,                            // register file write data
 
         // DBus interface
