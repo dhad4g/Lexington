@@ -1,8 +1,8 @@
 # GPro 2 (Saratoga) RISC-V CPU
 
-![Status](https://img.shields.io/badge/status-initial_design-blue)
-<!-- ![Sim](https://img.shields.io/badge/simulation-passing-green) -->
-<!-- ![FPGA](https://img.shields.io/badge/FPGA-failing-red) -->
+![Status](https://img.shields.io/badge/status-active_development-blue)
+![Sim](https://img.shields.io/badge/simulation-passing-green)
+![FPGA](https://img.shields.io/badge/FPGA-untested-yellow)
 
 
 The GPro 2 (Saratoga) is the second generation of RISC-V processors designed by
