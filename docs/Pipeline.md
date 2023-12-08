@@ -42,9 +42,9 @@ or memory operation latency.
 
 ## Data Hazards
 
-To avoid all data hazards, both General Purpose Registers (GPR) and Control and
-Status Registers (CSR) support writing and reading to the same destination in
-the same cycle. The value read will be the same as the value written.
+To avoid data hazards, General Purpose Registers (GPR) support writing and
+reading to the same destination in the same cycle. The value read will be the
+same as the value written.
 
 General Purpose Registers (GPR) supports writing and reading to the same destination
 in the same cycle. The value read will be the same ase the value written.

@@ -140,8 +140,8 @@ implementation returns 0x0, indicating no allocated architecture ID.
 $~~~~$ **Read-Only**
 
 This read-only register encodes the version of the processor implementation as a
-subset of the architecture ID. This implementation returns 0x1, indicating the
-first iteration of the GPro CPU.
+subset of the architecture ID. This implementation returns 0x2, indicating the
+second generation of the GPro CPU.
 
 
 ### Hart ID Register `mhartid`
@@ -250,7 +250,7 @@ by clearing the corresponding bit. The exception are the standard interrupt bits
 Bits 15:0 encode the standard interrupt causes as shown in Table 4. These bits
 have unique behaviors such as being read-only. They must be cleared by resolving
 the interrupt source (ex. write
-[`mtimecmp[h]`](#machine-timer-registers-mtime-and-mtimecmp) $\lt$ [`mtime[h]`](#machine-timer-registers-mtime-and-mtimecmp)).
+[`mtimecmp[h]`](#machine-timer-registers-mtime-and-mtimecmp) $<$ [`mtime[h]`](#machine-timer-registers-mtime-and-mtimecmp)).
 
 Additional interrupt sources are listed in the [`mcause`](#machine-cause-register-mcause)
 section. These bits are read/write and the bit must be cleared by software in the
