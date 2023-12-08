@@ -28,7 +28,7 @@ module dbus #(
         input  rv32::word mtime_rd_data,                            // read data from mtime module
         input  rv32::word axi_rd_data,                              // read data from AXI interface
         input  logic axi_access_fault,                              // flag indicating AXI transaction access fault
-        input  logic axi_busy,                                      // flag indicating AXI transaction requires additonal cycles
+        input  logic axi_busy,                                      // flag indicating AXI transaction requires additional cycles
 
         output rv32::word rd_data,                                  // read data to LSU
         output logic rom_rd_en,                                     // read enable to ROM
@@ -95,11 +95,11 @@ module dbus #(
     assign ram_wait = rd_en & (is_ram_addr | is_rom_addr) & (rd_latency!=0);
     always_ff @(posedge clk) begin
         if (!rst_n) begin
-            rd_latency <= 3-1;
+            rd_latency = 3-1;
         end
         else begin
             if (!rd_latency) begin
-                rd_latency <= 3-1;
+                rd_latency = 3-1;
             end
             else if (rd_en & (is_ram_addr | is_rom_addr)) begin
                 rd_latency--;

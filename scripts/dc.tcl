@@ -49,10 +49,10 @@ set_wire_load_model -name G50K
 
 # specify the area constraint for the design (note that in default mode)
 # the timing constraint will have priority over the area constraints
-set_max_area 555000
+set_max_area 2000000
 
-# create the clock for the design with the period 0.6 ns
-create_clock clk -period 1 -name clk
+# create the clock for the design
+create_clock clk -period 100 -name clk
 set_drive 0 clk
 dont_touch_network clk
 
@@ -69,13 +69,13 @@ check_timing > check_timing.txt
 uniquify
 
 # do the mapping now
-compile -map_effor medium
-#compile -map_effort medium -ungroup_all
+#compile -map_effort medium
+compile -map_effort medium -ungroup_all
 #compile_ultra
 
 #Export netlist for post-synthesis simulation into synth_netlist.v
 change_names -rules verilog -hierarchy
-write -format verilog -hierarchy -output "${top}_netlist_synopsys.v"
+write -format verilog -hierarchy -output "${top}_netlist.v"
 write_sdc "${top}.sdc"
 
 #Generate reports
@@ -86,7 +86,7 @@ report_constraint -all_violators > violator_report.txt
 report_register -level_sensitive > latch_report.txt
 
 
-# Exit if not interractive
-if { ![info exists interract] } {
+# Exit if not interactive
+if { ![info exists interact] } {
     exit
 }

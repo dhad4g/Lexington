@@ -5,7 +5,7 @@
 import saratoga::*;
 
 
-(* keep_hierarchy = "yes" *)
+// (* keep_hierarchy = "yes" *)
 module ram #(
         parameter ADDR_WIDTH    = DEFAULT_RAM_ADDR_WIDTH,   // word-addressable address bits
         parameter DUMP_MEM      = 0                         // set to one to enable dump of memory content
@@ -44,13 +44,13 @@ module ram #(
     endgenerate
 
     // Dump memory for simulation
-    generate
-    if (DUMP_MEM) begin
-        for (genvar i=0; i<DEPTH; i++) begin
-            rv32::word _data;
-            assign _data = data[i];
-        end
-    end
-    endgenerate
+    // generate
+    // if (DUMP_MEM) begin
+    //     for (genvar i=0; i<DEPTH; i++) begin
+    //         rv32::word _data;
+    //         assign _data = data[i];
+    //     end
+    // end
+    // endgenerate
 
 endmodule

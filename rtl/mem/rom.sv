@@ -5,6 +5,7 @@
 import saratoga::*;
 
 
+(* dont_touch = "yes" *)
 module rom #(
         parameter ADDR_WIDTH    = DEFAULT_ROM_ADDR_WIDTH    // word-addressable address bits
     ) (

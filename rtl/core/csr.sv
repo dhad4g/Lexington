@@ -428,7 +428,7 @@ module csr #(
             mepc            <= 0;
             mcause          <= 0;
             mtval           <= 0;
-            _interrupt_buff     <= 0;
+            _interrupt_buff  = 0;
         end
         else begin
             logic _mip_wr;

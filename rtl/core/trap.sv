@@ -148,7 +148,7 @@ module trap (
     // Shadow register control
     always_ff @(posedge clk) begin
         if (!rst_n) begin
-            _trap_req = 0;
+            _trap_req <= 0;
         end
         else begin
             if (!_trap_req) begin

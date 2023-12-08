@@ -33,9 +33,9 @@ All subordinates must have the same address width.
 **Table 1.** Memory Mapped I/O
 | Address | Device |
 | --- | --- |
-| 0xFFFF_FF00 - 0xFFFF_FF0F | `timer0` |
-| 0xFFFF_FF10 - 0xFFFF_FF1F | `timer1` |
-| 0xFFFF_FF70 - 0xFFFF_FF7F | `uart0` |
+| 0xFFFF_FF00 - 0xFFFF_FF0F | `TIM0` |
+| 0xFFFF_FF10 - 0xFFFF_FF1F | `TIM1` |
+| 0xFFFF_FF70 - 0xFFFF_FF7F | `UART0` |
 | 0xFFFF_FFA0 - 0xFFFF_FFAF | `GPIOA` |
 | 0xFFFF_FFB0 - 0xFFFF_FFBF | `GPIOB` |
 | 0xFFFF_FFC0 - 0xFFFF_FFCF | `GPIOC` |

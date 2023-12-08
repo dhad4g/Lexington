@@ -9,7 +9,7 @@ if { ![info exists top]} {
     puts "Error: top module must be set"
     exit 1
 }
-set netlist "${top}_netlist_synopsys.v"
+set netlist "${top}_netlist.v"
 
 # Read source
 read_verilog $netlist

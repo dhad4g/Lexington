@@ -4,7 +4,7 @@
 //depend mem/rom.sv
 //depend mem/ram.sv
 //depend axi4_lite_manager.sv
-//depend axi4_lite_crossbar.sv
+//depend axi4_lite_crossbar4.sv
 //depend peripheral/gpio.sv
 `timescale 1ns/1ps
 
@@ -78,6 +78,7 @@ module soc #(
     axi4_lite #(.WIDTH(rv32::XLEN), .ADDR_WIDTH(GPIO_ADDR_WIDTH)) axi_gpioa();
     axi4_lite #(.WIDTH(rv32::XLEN), .ADDR_WIDTH(GPIO_ADDR_WIDTH)) axi_gpiob();
     axi4_lite #(.WIDTH(rv32::XLEN), .ADDR_WIDTH(GPIO_ADDR_WIDTH)) axi_gpioc();
+    axi4_lite #(.WIDTH(rv32::XLEN), .ADDR_WIDTH(UART_ADDR_WIDTH)) axi_uart0();
     ////////////////////////////////////////////////////////////
     // END: Internal Wires
     ////////////////////////////////////////////////////////////
@@ -197,19 +198,23 @@ module soc #(
         .busy(axi_busy),
         .axi_m(axi_m.manager)
     );
-    axi4_lite_crossbar #(
+    axi4_lite_crossbar4 #(
         .WIDTH(rv32::XLEN),
         .ADDR_WIDTH(AXI_ADDR_WIDTH),
-        .COUNT(3),
-        .S_ADDR_WIDTH({GPIO_ADDR_WIDTH, GPIO_ADDR_WIDTH, GPIO_ADDR_WIDTH}),
-        .S_BASE_ADDR({GPIOA_BASE_ADDR, GPIOB_BASE_ADDR, GPIOC_BASE_ADDR})
+        .S00_ADDR_WIDTH(GPIO_ADDR_WIDTH),
+        .S01_ADDR_WIDTH(GPIO_ADDR_WIDTH),
+        .S02_ADDR_WIDTH(GPIO_ADDR_WIDTH),
+        .S03_ADDR_WIDTH(UART_ADDR_WIDTH),
+        .S00_BASE_ADDR(GPIOA_BASE_ADDR),
+        .S01_BASE_ADDR(GPIOA_BASE_ADDR),
+        .S02_BASE_ADDR(GPIOC_BASE_ADDR),
+        .S03_BASE_ADDR(UART0_BASE_ADDR)
     ) crossbar (
         .axi_m,
-        .axi_sx({
-            axi_gpioa,
-            axi_gpiob,
-            axi_gpioc
-        })
+        .axi_s00(axi_gpioa),
+        .axi_s01(axi_gpiob),
+        .axi_s02(axi_gpioc),
+        .axi_s03(axi_uart0)
     );
     ////////////////////////////////////////////////////////////
     // END: AXI Manager & Crossbar Instantiation

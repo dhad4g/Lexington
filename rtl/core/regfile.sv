@@ -56,12 +56,12 @@ module regfile (
 
 
     // Unpack registers for simulation
-    genvar i;
-    generate
-    for (i=1; i<rv32::REG_COUNT; i++) begin
-        rv32::word register;
-        assign register = data[i];
-    end
-    endgenerate
+    // genvar i;
+    // generate
+    // for (i=1; i<rv32::REG_COUNT; i++) begin
+    //     rv32::word register;
+    //     assign register = data[i];
+    // end
+    // endgenerate
 
 endmodule
