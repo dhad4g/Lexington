@@ -6,7 +6,9 @@
 import lexington::*;
 
 
-module mtime (
+module mtime #(
+        parameter CLK_FREQ      = DEFAULT_CLK_FREQ          // core clock in Hz
+    ) (
         input  logic clk,                                   // system clock
         input  logic rst_n,                                 // reset (active-low)
 
@@ -19,8 +21,6 @@ module mtime (
         output logic [63:0] time_rd_data,                   // read-only time(h) CSR
         output logic interrupt                              // machine timer interrupt flag
     );
-
-    localparam CYCLES_PER_TICK = CLK_FREQ / MTIME_FREQ;
 
     logic [63:0] mtime;
     logic [63:0] mtimecmp;
@@ -82,6 +82,8 @@ module mtime (
 
 
     // Cycle count logic
+    localparam CLK_PERIOD = 1_000_000_000 / CLK_FREQ;   // clock period in ns
+    localparam integer CYCLES_PER_TICK = MTIME_PERIOD / CLK_PERIOD;
     assign tick = (counter == CYCLES_PER_TICK-1);
     always_ff @(posedge clk) begin
         if (!rst_n) begin

@@ -29,6 +29,10 @@
         "CSRRSI",
         "CSRRW",
         "CSRRWI",
+        "csrs",
+        "csrsi",
+        "csrw",
+        "cycleh",
         "dbus",
         "DECERR",
         "dout",
@@ -59,6 +63,7 @@
         "immediates",
         "inout",
         "instret",
+        "instreth",
         "JALR",
         "JEDEC",
         "marchid",
@@ -86,6 +91,7 @@
         "MSIP",
         "mstatus",
         "mstatush",
+        "MTIE",
         "mtimecmp",
         "mtimecmph",
         "mtimeh",
@@ -112,6 +118,7 @@
         "SLTU",
         "SLTUI",
         "SLVERR",
+        "SMODE",
         "SPIE",
         "SRAI",
         "SRAM",
@@ -124,6 +131,7 @@
         "SUBI",
         "timeh",
         "uimm",
+        "UMODE",
         "Vsync",
         "WARL",
         "WDATA",
@@ -140,6 +148,6 @@
         "sw/lib/inc"
     ],
     "C_Cpp.default.systemIncludePath": [
-        "W:/opt/riscv32i_zicsr/lib/gcc/riscv32-unknown-elf/12.2.0/include"
+        "W:/opt/riscv/lib/gcc/riscv32-unknown-elf/12.2.0/include"
     ]
 }

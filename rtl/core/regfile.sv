@@ -5,22 +5,20 @@
 import lexington::*;
 
 
-module regfile #(
-        
-    ) (
+module regfile (
         input  logic clk,                       // write port clock
         // reset not needed, registers can start in undefined state
 
         input  logic rs1_en,                    // enable for read port 1
-        input  rv32::reg_addr_t rs1_addr,       // address for read port 1
+        input  rv32::gpr_addr_t rs1_addr,       // address for read port 1
         output rv32::word rs1_data,             // data for read port 1
 
         input  logic rs2_en,                    // enable for read port 2
-        input  rv32::reg_addr_t rs2_addr,       // address for read port 2
+        input  rv32::gpr_addr_t rs2_addr,       // address for read port 2
         output rv32::word rs2_data,             // data for read port 2
 
         input  logic dest_en,                   // enable for write port
-        input  rv32::reg_addr_t dest_addr,      // address for write port
+        input  rv32::gpr_addr_t dest_addr,      // address for write port
         input  rv32::word dest_data             // data for write port
 
     );

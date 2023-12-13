@@ -62,7 +62,12 @@ module top (
     logic [15:0] gpiob;
     logic [15:0] gpioc;
 
-    assign rst = btnC;
+    // Register reset button due to sub-optimal I/O pin
+    // avoids ERROR:[Place 30-574]
+    always_ff @(posedge clk) begin
+        rst <= btnC;
+    end
+
     assign rst_n = ~rst;
     assign gpioa = led;
     assign gpiob = sw;
@@ -75,6 +80,7 @@ module top (
 
 
     soc #(
+        .CLK_FREQ(40_000_000),
         .UART0_BAUD(9600),
         .UART0_FIFO_DEPTH(8)
     ) SOC (

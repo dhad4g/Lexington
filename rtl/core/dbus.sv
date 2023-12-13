@@ -13,9 +13,7 @@ module dbus #(
         parameter ROM_BASE_ADDR     = DEFAULT_ROM_BASE_ADDR,        // ROM base address (must be aligned to ROM size)
         parameter RAM_BASE_ADDR     = DEFAULT_RAM_BASE_ADDR,        // RAM base address (must be aligned to RAM size)
         parameter MTIME_BASE_ADDR   = DEFAULT_MTIME_BASE_ADDR,      // machine timer base address (see [CSR](./CSR.md))
-        parameter AXI_BASE_ADDR     = DEFAULT_AXI_BASE_ADDR,        // AXI bus address space base (must be aligned to AXI address space)
-        parameter USE_MTIME         = 1,                            // enable generation of machine timer address space
-        parameter USE_AXI           = 1                             // enable generation of AXI address space
+        parameter AXI_BASE_ADDR     = DEFAULT_AXI_BASE_ADDR        // AXI bus address space base (must be aligned to AXI address space)
     ) (
         // clock not needed; module is asynchronous
         // reset not needed; module is read-only
@@ -81,9 +79,9 @@ module dbus #(
 
 
     // Set data_misaligned, load_store_n, and dbus_wait
-    assign data_misaligned  = (rd_en | wr_en) & ((addr[rv32::ADDR_BITS_IN_WORD-1:0]));
+    assign data_misaligned  = (rd_en | wr_en) & (|(addr[rv32::ADDR_BITS_IN_WORD-1:0]));
     assign load_store_n     = rd_en;
-    assign dbus_wait        = ((rd_en | wr_en) && USE_AXI && is_axi_addr) ? axi_busy : 0;
+    assign dbus_wait        = ((rd_en | wr_en) && is_axi_addr) ? axi_busy : 0;
     assign dbus_err         = data_misaligned | data_access_fault;
 
     // Pass through wr_data and wr_strobe
@@ -119,12 +117,12 @@ module dbus #(
                 ram_wr_en = wr_en;
                 rd_data = ram_rd_data;
             end
-            else if (USE_MTIME && is_mtime_addr) begin
+            else if (is_mtime_addr) begin
                 mtime_rd_en = rd_en;
                 mtime_wr_en = wr_en;
                 rd_data = mtime_rd_data;
             end
-            else if (USE_AXI && is_axi_addr) begin
+            else if (is_axi_addr) begin
                 data_access_fault = axi_access_fault;
                 axi_rd_en = rd_en;
                 axi_wr_en = wr_en;
