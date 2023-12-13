@@ -12,10 +12,10 @@ The AXI protocol defines five independent transaction channels:
 - write data (prefix W)
 - Write response (prefix B)
 
-![](figures/axi/write_channels.png) \
+![](./figures/axi/write_channels.png) \
 **Figure 1.** Write channels
 
-![](figures/axi/read_channels.png) \
+![](./figures/axi/read_channels.png) \
 **Figure 2.** Read channels
 
 ### Parameters
@@ -114,8 +114,8 @@ In the dependency diagrams of Figure 3 and 4:
 - Double-headed arrows represent a *hard* dependency, meaning the signal at the end of the arrow *must* wait for the signal at the start of the arrow.
 - A signal may only be directly dependent on another signal if there is an arrow pointing from the dependency signal to the dependent signal.
 
-![](figures/axi/read_transaction_handshake_dependencies.png) \
+![](./figures/axi/read_transaction_handshake_dependencies.png) \
 **Figure 3.** Read transaction handshake dependencies
 
-![](figures/axi/write_transaction_handshake_dependencies.png) \
+![](./figures/axi/write_transaction_handshake_dependencies.png) \
 **Figure 4.** Write transaction handshake dependencies

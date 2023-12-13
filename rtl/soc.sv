@@ -3,7 +3,7 @@
 //depend debug.sv
 //depend mem/*.sv
 //depend axi4_lite_manager.sv
-//depend axi4_lite_crossbar.sv
+//depend axi4_lite_crossbar4.sv
 //depend peripheral/*.sv
 `timescale 1ns/1ps
 
@@ -37,7 +37,6 @@ module soc #(
     localparam MTIME_BASE_ADDR      = DEFAULT_MTIME_BASE_ADDR;      // machine timer base address (see [CSR](./CSR.md))
     localparam AXI_BASE_ADDR        = DEFAULT_AXI_BASE_ADDR;        // AXI bus address space base (must be aligned to AXI address space)
     localparam AXI_TIMEOUT          = DEFAULT_AXI_TIMEOUT;          // AXI bus timeout in cycles
-    localparam HART_ID              = 0;                            // hardware thread id (see mhartid CSR)
     localparam RESET_ADDR           = DEFAULT_RESET_ADDR;           // program counter reset/boot address
 
 
@@ -66,14 +65,6 @@ module soc #(
     logic axi_busy;                                     // DBus
     rv32::word wr_data;                                 // shared write data
     logic [(rv32::XLEN/8)-1:0] wr_strobe;               // shared write strobe
-    // Hardware Debugger Ports
-    logic dbg_uart_en;
-    logic dbg_uart_send;
-    logic dbg_uart_recv;
-    logic [7:0] dbg_uart_dout;
-    logic [7:0] dbg_uart_din;
-    logic dbg_uart_rx_busy;
-    logic dbg_uart_tx_busy;
     // Interrupt flags
     logic gpioa_int_0;                                  // GPIOA interrupt 0
     logic gpioa_int_1;                                  // GPIOA interrupt 1
@@ -112,8 +103,8 @@ module soc #(
         .RAM_BASE_ADDR(RAM_BASE_ADDR),
         .MTIME_BASE_ADDR(MTIME_BASE_ADDR),
         .AXI_BASE_ADDR(AXI_BASE_ADDR),
-        .HART_ID(HART_ID),
-        .RESET_ADDR(RESET_ADDR)
+        .RESET_ADDR(RESET_ADDR),
+        .HART_ID(0)
     ) CORE0 (
         .clk,
         .rst_n,
@@ -191,29 +182,6 @@ module soc #(
 
     ////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////
-    // BEGIN: Hardware Debugger Instantiation
-    ////////////////////////////////////////////////////////////
-    debug DEBUG (
-        .clk,
-        .rst_n,
-        .uart_en(dbg_uart_en),
-        .uart_send(dbg_uart_send),
-        .uart_recv(dbg_uart_recv),
-        .uart_dout(dbg_uart_dout),
-        .uart_din(dbg_uart_din),
-        .uart_rx_busy(dbg_uart_rx_busy),
-        .uart_tx_busy(dbg_uart_tx_busy)
-    );
-    ////////////////////////////////////////////////////////////
-    // END: Hardware Debugger Instantiation
-    ////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////
-
-
-
-
-    ////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////
     // BEGIN: AXI Manager & Crossbar Instantiation
     ////////////////////////////////////////////////////////////
     axi4_lite_manager #(
@@ -232,20 +200,23 @@ module soc #(
         .busy(axi_busy),
         .axi_m(axi_m.manager)
     );
-    axi4_lite_crossbar #(
+    axi4_lite_crossbar4 #(
         .WIDTH(rv32::XLEN),
         .ADDR_WIDTH(AXI_ADDR_WIDTH),
-        .COUNT(4),
-        .S_ADDR_WIDTH({GPIO_ADDR_WIDTH, GPIO_ADDR_WIDTH, GPIO_ADDR_WIDTH, UART_ADDR_WIDTH}),
-        .S_BASE_ADDR({GPIOA_BASE_ADDR, GPIOB_BASE_ADDR, GPIOC_BASE_ADDR, UART0_BASE_ADDR})
-    ) AXI_CROSSBAR (
+        .S00_ADDR_WIDTH(GPIO_ADDR_WIDTH),
+        .S01_ADDR_WIDTH(GPIO_ADDR_WIDTH),
+        .S02_ADDR_WIDTH(GPIO_ADDR_WIDTH),
+        .S03_ADDR_WIDTH(UART_ADDR_WIDTH),
+        .S00_BASE_ADDR(GPIOA_BASE_ADDR),
+        .S01_BASE_ADDR(GPIOA_BASE_ADDR),
+        .S02_BASE_ADDR(GPIOC_BASE_ADDR),
+        .S03_BASE_ADDR(UART0_BASE_ADDR)
+    ) CROSSBAR (
         .axi_m,
-        .axi_sx({
-            axi_gpioa,
-            axi_gpiob,
-            axi_gpioc,
-            axi_uart0
-        })
+        .axi_s00(axi_gpioa),
+        .axi_s01(axi_gpiob),
+        .axi_s02(axi_gpioc),
+        .axi_s03(axi_uart0)
     );
     ////////////////////////////////////////////////////////////
     // END: AXI Manager & Crossbar Instantiation

@@ -123,7 +123,7 @@ if $synth; then
         dc_shell $DC_OPTS -f "${PROJ_DIR}/scripts/dc.tcl" -x "$TCL_CMD; set interact 1"
         rval=$?
     else
-        dc_shell $DC_OPTS -f "${PROJ_DIR}/scripts/dc.tcl" -x "$TCL_CMD" | $OUT_FORMAT
+        dc_shell $DC_OPTS -f "${PROJ_DIR}/scripts/dc.tcl" -x "$TCL_CMD" 2>&1 | $OUT_FORMAT
         rval=$?
     fi
     if [ "$rval" != "0" ]; then

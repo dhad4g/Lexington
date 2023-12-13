@@ -16,12 +16,12 @@ and *interrupt*.
 
 ### Parameters
 
-- **`CSR_ADDR_WIDTH=12`** CSR address width
-- **`RESET_ADDR=0x0000_0000`** program counter reset/boot address
 - **`XLEN=32`** data width
 
 ### Inputs
 
+- **`clk`** core clock
+- **`rst_n`** active-low reset
 - **`pc[WIDTH-1:0]`** current program counter value
 - **`decoder_next_pc[WIDTH-1:0]`** next PC calculated by decoder
 - **`global_mie`** global machine-mode interrupt enable from mstatus CSR
@@ -32,8 +32,6 @@ and *interrupt*.
 - **`mret`** machine-mode return flag
 - **`dbus_wait`** flag indicating dbus transaction requires extra cycle
   
-- **`clk`** core clock
-- **`rst_n`** active-low reset
 *exception flags*
 - **`inst_access_fault`** instruction access fault flag, from fetch
 - **`inst_misaligned`** instruction address misaligned flag, from Decode
@@ -57,8 +55,8 @@ and *interrupt*.
 - **`gpioc_int_1`** GPIOA interrupt 1
 - **`uart0_rx_int`** UART0 RX interrupt
 - **`uart0_tx_int`** UART0 TX interrupt
-- **`timer0_int`** timer0 interrupt
-- **`timer1_int`** timer1 interrupt
+- **`tim0_int`** timer0 interrupt
+- **`tim1_int`** timer1 interrupt
 
 
 ### Outputs
@@ -82,13 +80,13 @@ Exception priority is in Table 1.
 
 **Table 1.** Exception priority
 
-| Priority | Trap Code | Description | Pipeline Stage |
-| --- | --- | --- | --- |
-| *Highest* | 3 | ~~Instruction address breakpoint~~ |
-| | 1 | Instruction access fault | Fetch Stage
-| | 2<br>0<br>8, 9, 11<br>3<br>3 | Illegal instruction<br>Instruction address misaligned<br>Environment call<br>Environment break<br>~~Load/store/AMO address breakpoint~~ | Decode Stage
-| | 4, 6 | Load/store/AMO address misaligned | Execute Stage
-| *Lowest* | 5, 7 | Load/store/AMO access fault | Execute Stage
+| Priority | Trap Code | Description |
+| --- | --- | --- |
+| *Highest* | 3 | Instruction address breakpoint |
+| | 1 | Instruction access fault |
+| | 2<br>0<br>8, 9, 11<br>3<br>3 | Illegal instruction<br>Instruction address misaligned<br>Environment call<br>Environment break<br>Load/store/AMO address breakpoint |
+| | 4, 6 | Load/store/AMO address misaligned |
+| *Lowest* | 5, 7 | Load/store/AMO access fault |
 
 Exceptions always have priority over interrupts.
 <br>

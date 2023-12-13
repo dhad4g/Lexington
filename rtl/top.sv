@@ -1,7 +1,6 @@
 //depend soc.sv
 //depend core.sv
 //depend core/*.sv
-//depend debug.sv
 //depend mem/*.sv
 //depend axi4_lite_manager.sv
 //depend axi4_lite_crossbar.sv

@@ -10,7 +10,7 @@ module ram #(
         parameter ADDR_WIDTH    = DEFAULT_RAM_ADDR_WIDTH,   // word-addressable address bits
         parameter DUMP_MEM      = 0                         // set to one to enable dump of memory content
     ) (
-        input wire clk,
+        input  logic clk,
         // reset not needed; memory can start in undefined state
 
         input  logic rd_en,                                 // read enable
@@ -27,6 +27,7 @@ module ram #(
 
     assign rd_data = (rd_en) ? data[addr] : 0;
 
+    // Write logic
     generate
         for (genvar i=0; i<rv32::XLEN; i+=8) begin
             always_ff @(posedge clk) begin

@@ -124,7 +124,7 @@ The lower 12-bits are zeroed.
 The add upper-immediate to PC (`AUIPC`) instruction builds PC-relative addresses.
 It adds the 20-bit upper-immediate value to the current PC then stores it in the destination register `dest`.
 
-![](figures/instructions/upper_imm_encoding.png) \
+![](./figures/instructions/upper_imm_encoding.png) \
 **Figure 5.** Upper immediate encoding
 
 <br>
@@ -146,7 +146,7 @@ Using indirect jumps helps in writing position-independent code.
 The PC is set to the address obtained by adding the sign-extended immediate offset `imm[20:1]` with the current PC.
 The encoded bit positions of the immediate value are out of order to increase overlap with other instructions.
 The least-significant bit of the immediate is always zero, forcing two-byte alignment.
-This allows the targeting of addresses $\plusmn$1 MiB.
+This allows the targeting of addresses $\pm$ 1 MiB.
 
 ***Important!*** These instructions will generate a misaligned instruction exception of the target address is not 4-byte aligned.
 
@@ -177,7 +177,7 @@ Using indirect jumps helps in writing position-independent code.
 A primary use of indirect jumps is evaluating if statements.
 
 The potential jump address is calculated by adding the **sign-extended** immediate offset `imm[12:1]` with the current PC.
-This allows the targeting of addresses $\plusmn$4 KiB.
+This allows the targeting of addresses $\pm$ 4 KiB.
 
 The branch instructions compare two register (`rs1` and `rs2`).
 If the condition of the specific instruction is met, then the PC is set to the calculated address, otherwise the PC is incremented by 4 as usual.
@@ -226,14 +226,14 @@ These two also have an unsigned variant, `LHU` and `LBU`, that zero fills the up
 
 *Note: loads with `dest`=x0 must still raise exceptions*
 
-![](figures/instructions/load_encoding.png) \
+![](./figures/instructions/load_encoding.png) \
 **Figure 9.** Load instruction encoding
 
 There are three store instructions that write data to the calculated memory address from the source register `src`.
 There is the 32-bit word (`SW`), 16-bit half-word (`SH`), and 8-bit byte (`SB`) store instructions.
 No sign-extension or zero padding is performed and only the associated number of bits are written to memory.
 
-![](figures/instructions/store_encoding.png) \
+![](./figures/instructions/store_encoding.png) \
 **Figure 10.** Store instruction encoding
 
 **Table 3.** Load/Store Instructions
@@ -366,13 +366,13 @@ responsible for raising the `xret` flag when this instruction is executed. Unlik
 the `ECALL` and `EBREAK` instructions, `MRET` does increment `minstret` as it does
 not generate an exception.
 
-![](figures/instructions/xret_encoding.png) \
+![](./figures/instructions/xret_encoding.png) \
 **Figure 15.** Trap-return instruction encoding
 
 The wait for interrupt (`WFI`) instruction is a microarchitecture hint instruction.
 This implementation treats `WFI` as a `NOP`.
 
-![](figures/instructions/wfi_encoding.png) \
+![](./figures/instructions/wfi_encoding.png) \
 **Figure 16.** Wait for interrupt instruction encoding
 
 **Table 5.** System Instructions

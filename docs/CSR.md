@@ -18,6 +18,14 @@ Decode Unit.
 The CSR unit uses synchronous/clocked logic.
 However, trap CSR operations are delegated to the trap unit using combinatorial logic.
 
+This document uses the RISC-V Specification definitions of *trap*, *exception*,
+and *interrupt*.
+- *trap*: the synchronous transfer of control to a trap handler caused by an
+  *exception* or *interrupt*
+- *exception*: an unusual condition occurring at run time associated with an
+  instruction in the current hart.
+- *interrupt*: an external event that occurs asynchronously to the current hart.
+
 ## Ports
 
 ### Parameters
@@ -41,6 +49,7 @@ However, trap CSR operations are delegated to the trap unit using combinatorial 
 
 ### Outputs
 
+- **`priv[1:0]`** current privilege mode (M-Mode=3,U-Mode=0)
 - **`rd_data[XLEN-1:0]`** read data
 - **`global_mie`** global machine-mode interrupt enable
 - **`trap_rd_en`** trap CSR read enable
@@ -134,7 +143,7 @@ first iteration of the GPro CPU.
 $~~~~$ **Read-Only**
 
 This read-only register encodes the execution environment unique, integer ID of
-the hardware thread. This implementation returns 0x0 as Saratoga only supports a
+the hardware thread. This implementation returns 0x0 as Lexington only supports a
 single hardware thread.
 
 
@@ -193,8 +202,7 @@ When an `xRET` instruction is executed:
 ### Machine Trap-Vector Base-Address Register `mtvec`
 
 *0x305*
-
-***Delegated to Trap Unit***
+$~~~~$ ***Delegated to Trap Unit***
 
 This read/write register contains the address of the trap handler function. All
 addresses are forced to be 4-byte aligned and the address's 2 LSBs are ignored.
@@ -225,8 +233,7 @@ Resets and NMIs always reset to the hardware defined RESET_ADDR (typically 0x000
 ### Machine Interrupt Pending `mip`
 
 *0x344*
-
-***Delegated to Trap Unit***
+$~~~~$ ***Delegated to Trap Unit***
 
 This read/write register encodes pending interrupts. Bit *i* corresponds to
 interrupt cause number *i* as reported in CSR [`mcause`](#machine-cause-register-mcause).
@@ -270,8 +277,7 @@ See the [Trap Unit](./Trap.md) for detailed trap behavior.
 ### Machine Interrupt Enable `mie`
 
 *0x304*
-
-***Delegated to Trap Unit***
+$~~~~$ ***Delegated to Trap Unit***
 
 This read/write register encodes the enable for interrupts. Bit *i* corresponds
 to interrupt cause number *i* as reported in the [`mcause` CSR](#machine-cause-register-mcause).
@@ -338,8 +344,7 @@ A general-purpose read/write register for use by machine mode.
 ### Machine Exception Program Count `mepc`
 
 *0x341*
-
-***Delegated to Trap Unit***
+$~~~~$ ***Delegated to Trap Unit***
 
 This read/write register holds the address of instruction that was interrupted
 or caused an exception when a trap is encountered in machine mode. This
@@ -352,8 +357,7 @@ See the [Trap Unit](./Trap.md) for detailed trap behavior.
 ### Machine Cause Register `mcause`
 
 *0x342*
-
-***Delegated to Trap Unit***
+$~~~~$ ***Delegated to Trap Unit***
 
 This read/write register encodes the event type that caused a trap. Any XLEN
 value is allowed to be written to this register. The MSB is asserted if this
@@ -406,9 +410,7 @@ See the [Trap Unit](./Trap.md) for detailed trap behavior.
 ### Machine Trap Value Register `mtval`
 
 *0x343*
-
-
-***Delegated to Trap Unit***
+$~~~~$ ***Delegated to Trap Unit***
 
 This read/write register contains exception-specific information.
 See the [Trap Unit](./Trap.md) for details.

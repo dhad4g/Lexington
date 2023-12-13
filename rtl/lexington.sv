@@ -14,6 +14,7 @@ package lexington;
     localparam DEFAULT_RAM_ADDR_WIDTH   = 10;               // word-addressable RAM address bits
     localparam DEFAULT_AXI_ADDR_WIDTH   = 29;               // byte-addressable AXI address space bits
     localparam MTIME_ADDR_WIDTH         = 4;                // byte-addressable machine timer address bits
+    localparam GPTIM_ADDR_WIDTH         = 4;                // byte-addressable general-purpose timer address bits
     localparam GPIO_ADDR_WIDTH          = 4;                // byte-addressable GPIO address bits
     localparam UART_ADDR_WIDTH          = 3;                // byte-addressable UART address bits
 
@@ -24,10 +25,12 @@ package lexington;
     localparam DEFAULT_RAM_BASE_ADDR    = 32'h4000_0000;    // must be aligned to RAM size
     localparam DEFAULT_MTIME_BASE_ADDR  = 32'hC000_0000;    // see CSR documentation
     localparam DEFAULT_AXI_BASE_ADDR    = 32'hE000_0000;    // must be aligned to AXI address space
-    localparam GPIOA_BASE_ADDR          = 32'hFFFF_FFA0;    // GPIOA base address
-    localparam GPIOB_BASE_ADDR          = 32'hFFFF_FFB0;    // GPIOB base address
-    localparam GPIOC_BASE_ADDR          = 32'hFFFF_FFC0;    // GPIOC base address
-    localparam UART0_BASE_ADDR          = 32'hFFFF_FF8F;    // UART0 base address
+    localparam TIM0_BASE_ADDR           = 32'hFFFF_FF0F;    // TIM0
+    localparam TIM1_BASE_ADDR           = 32'hFFFF_FF1F;    // TIM1
+    localparam UART0_BASE_ADDR          = 32'hFFFF_FF8F;    // UART0
+    localparam GPIOA_BASE_ADDR          = 32'hFFFF_FFA0;    // GPIOA
+    localparam GPIOB_BASE_ADDR          = 32'hFFFF_FFB0;    // GPIOB
+    localparam GPIOC_BASE_ADDR          = 32'hFFFF_FFC0;    // GPIOC
 
     // Other Tunable Parameters
     localparam MTIME_PERIOD             = 1_000;            // mtime 'tick' period in ns

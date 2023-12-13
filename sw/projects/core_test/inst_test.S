@@ -659,7 +659,6 @@ inst_test:
     csrw    mip, x11            // trigger interrupt
     nop
     auipc   x11, 0
-    addi    x11, x11, -4
     // check mepc
     csrr    x10, mepc
     call    check

@@ -20,7 +20,7 @@ The GPro 2 (Saratoga) is currently in early development. The current status can 
 
 - RV32I instruction set
 - CSR extension
-- Machine-mode only
+- Machine-mode and User-mode privilege levels
 - Modified-Harvard architecture
 - Single cycle execution
 - Machine timer with interrupt support
