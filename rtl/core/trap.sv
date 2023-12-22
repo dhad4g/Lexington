@@ -91,7 +91,7 @@ module trap #(
     assign mip.reserved0 = 0;
     assign mip.MEI = 0;
     assign mip.SEI = 0;
-    assign mip.MTI = mtime_interrupt;
+    always_ff @(posedge clk) mip.MTI <= mtime_interrupt;
     assign mip.STI = 0;
     assign mip.MSI = 0;
     assign mip.SSI = 0;
@@ -334,34 +334,44 @@ module trap #(
 
             // Interrupt pending detect; overwrites CSR write instructions
             if (uart0_rx_int) begin
-                mip[TRAP_CODE_UART0RX] <= 1;
+                // mip[TRAP_CODE_UART0RX] <= 1;
+                mip.UART0RX <= 1;
             end
             if (uart0_tx_int) begin
-                mip[TRAP_CODE_UART0TX] <= 1;
+                // mip[TRAP_CODE_UART0TX] <= 1;
+                mip.UART0TX <= 1;
             end
             if (timer0_int) begin
-                mip[TRAP_CODE_TIM0] <= 1;
+                // mip[TRAP_CODE_TIM0] <= 1;
+                mip.TIM0 <= 1;
             end
             if (timer1_int) begin
-                mip[TRAP_CODE_TIM1] <= 1;
+                // mip[TRAP_CODE_TIM1] <= 1;
+                mip.TIM1 <= 1;
             end
             if (gpioa_int_0) begin
-                mip[TRAP_CODE_GPIOA0] <= 1;
+                // mip[TRAP_CODE_GPIOA0] <= 1;
+                mip.GPIOA0 <= 1;
             end
             if (gpioa_int_1) begin
-                mip[TRAP_CODE_GPIOA1] <= 1;
+                // mip[TRAP_CODE_GPIOA1] <= 1;
+                mip.GPIOA1 <= 1;
             end
             if (gpiob_int_0) begin
-                mip[TRAP_CODE_GPIOB0] <= 1;
+                // mip[TRAP_CODE_GPIOB0] <= 1;
+                mip.GPIOB0 <= 1;
             end
             if (gpiob_int_1) begin
-                mip[TRAP_CODE_GPIOB1] <= 1;
+                // mip[TRAP_CODE_GPIOB1] <= 1;
+                mip.GPIOB1 <= 1;
             end
             if (gpioc_int_0) begin
-                mip[TRAP_CODE_GPIOC0] <= 1;
+                // mip[TRAP_CODE_GPIOC0] <= 1;
+                mip.GPIOC0 <= 1;
             end
             if (gpioc_int_1) begin
-                mip[TRAP_CODE_GPIOC1] <= 1;
+                // mip[TRAP_CODE_GPIOC1] <= 1;
+                mip.GPIOC1 <= 1;
             end
 
         end

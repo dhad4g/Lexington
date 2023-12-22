@@ -77,7 +77,7 @@ if [ ! -f "${SW_PROJ_DIR}/$proj/Makefile" ]; then
 fi
 
 
-echo "Beginning compile and implemenation for software project $proj:"
+echo "Beginning compile and implementation for software project $proj:"
 top="${RTL_SRC_DIR}/top.sv"
 mkdir -p "${PROJ_DIR}/build/implement"
 cd "${PROJ_DIR}/build/implement"

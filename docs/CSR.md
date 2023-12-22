@@ -238,7 +238,8 @@ $~~~~$ ***Delegated to Trap Unit***
 This read/write register encodes pending interrupts. Bit *i* corresponds to
 interrupt cause number *i* as reported in CSR [`mcause`](#machine-cause-register-mcause).
 Pending interrupts are not cleared by hardware but must be cleared by software
-by clearing the corresponding bit. The exception are the standard interrupt bits.
+by clearing the corresponding bit; the standard interrupt bits (15:0) must be
+cleared by resolving the interrupt source.
 
 Bits 15:0 encode the standard interrupt causes as shown in Table 4. These bits
 have unique behaviors such as being read-only. They must be cleared by resolving
@@ -249,6 +250,9 @@ Additional interrupt sources are listed in the [`mcause`](#machine-cause-registe
 section. These bits are read/write and the bit must be cleared by software in the
 trap handler. Some interrupt sources may also require that the source of the
 interrupt is resolved.
+
+All interrupts, standard and non-standard, are registered and are thus delayed
+by 1 cycle.
 
 See the [Trap Unit](./Trap.md) for detailed trap behavior.
 

@@ -208,7 +208,7 @@ module soc #(
         .S02_ADDR_WIDTH(GPIO_ADDR_WIDTH),
         .S03_ADDR_WIDTH(UART_ADDR_WIDTH),
         .S00_BASE_ADDR(GPIOA_BASE_ADDR),
-        .S01_BASE_ADDR(GPIOA_BASE_ADDR),
+        .S01_BASE_ADDR(GPIOB_BASE_ADDR),
         .S02_BASE_ADDR(GPIOC_BASE_ADDR),
         .S03_BASE_ADDR(UART0_BASE_ADDR)
     ) CROSSBAR (
@@ -267,13 +267,13 @@ module soc #(
         .tx(uart0_tx),
         .rx_int(uart0_rx_int),
         .tx_int(uart0_tx_int),
-        .dbg_en(dbg_uart_en),
-        .dbg_send(dbg_uart_send),
-        .dbg_recv(dbg_uart_recv),
-        .dbg_dout(dbg_uart_dout),
-        .dbg_din(dbg_uart_din),
-        .dbg_rx_busy(dbg_uart_rx_busy),
-        .dbg_tx_busy(dbg_uart_tx_busy),
+        .dbg_en(0),
+        .dbg_send(),
+        .dbg_recv(),
+        .dbg_dout(),
+        .dbg_din(),
+        .dbg_rx_busy(),
+        .dbg_tx_busy(),
         .axi(axi_uart0)
     );
     assign timer0_int = 0;

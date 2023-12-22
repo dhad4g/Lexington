@@ -31,7 +31,7 @@ and *interrupt*.
 - **`csr_wr_data[WIDTH-1:0]`** CSR write data
 - **`mret`** machine-mode return flag
 - **`dbus_wait`** flag indicating dbus transaction requires extra cycle
-  
+
 *exception flags*
 - **`inst_access_fault`** instruction access fault flag, from fetch
 - **`inst_misaligned`** instruction address misaligned flag, from Decode
@@ -100,6 +100,9 @@ Interrupt conditions are continually evaluated, and an interrupt will trap if:
 1) global interrupts are enabled, indicated by `mstatus_mie` being asserted,
 2) an interrupt is both pending and enabled, indicated by the same bit being asserted in `mip` and `mie` respectively.
 3) an exception is not occurring
+
+All interrupts, standard and non-standard, are registered and are thus delayed
+by 1 cycle.
 
 Interrupts use a static priority scheme where lower trap codes have higher interrupt priority (i.e. highest priority is trap code 0).
 

@@ -44,30 +44,33 @@ module axi4_lite_crossbar4 #(
             rd_active = 0;
         end
         else begin
-            wr_active[0] = (S00_BASE_ADDR == mask_upper_bits(_awaddr, S00_ADDR_WIDTH));
-            wr_active[1] = (S01_BASE_ADDR == mask_upper_bits(_awaddr, S01_ADDR_WIDTH));
-            wr_active[2] = (S02_BASE_ADDR == mask_upper_bits(_awaddr, S02_ADDR_WIDTH));
-            wr_active[3] = (S03_BASE_ADDR == mask_upper_bits(_awaddr, S03_ADDR_WIDTH));
-            rd_active[0] = (S00_BASE_ADDR == mask_upper_bits(_araddr, S00_ADDR_WIDTH));
-            rd_active[1] = (S01_BASE_ADDR == mask_upper_bits(_araddr, S01_ADDR_WIDTH));
-            rd_active[2] = (S02_BASE_ADDR == mask_upper_bits(_araddr, S02_ADDR_WIDTH));
-            rd_active[3] = (S03_BASE_ADDR == mask_upper_bits(_araddr, S03_ADDR_WIDTH));
+            wr_active[0] = (mask_upper_bits(S00_BASE_ADDR, 0) == mask_upper_bits(_awaddr, S00_ADDR_WIDTH));
+            wr_active[1] = (mask_upper_bits(S01_BASE_ADDR, 0) == mask_upper_bits(_awaddr, S01_ADDR_WIDTH));
+            wr_active[2] = (mask_upper_bits(S02_BASE_ADDR, 0) == mask_upper_bits(_awaddr, S02_ADDR_WIDTH));
+            wr_active[3] = (mask_upper_bits(S03_BASE_ADDR, 0) == mask_upper_bits(_awaddr, S03_ADDR_WIDTH));
+            rd_active[0] = (mask_upper_bits(S00_BASE_ADDR, 0) == mask_upper_bits(_araddr, S00_ADDR_WIDTH));
+            rd_active[1] = (mask_upper_bits(S01_BASE_ADDR, 0) == mask_upper_bits(_araddr, S01_ADDR_WIDTH));
+            rd_active[2] = (mask_upper_bits(S02_BASE_ADDR, 0) == mask_upper_bits(_araddr, S02_ADDR_WIDTH));
+            rd_active[3] = (mask_upper_bits(S03_BASE_ADDR, 0) == mask_upper_bits(_araddr, S03_ADDR_WIDTH));
         end
     end
 
 
-    // Latch addresses
-    always_latch begin
+    // Latch addresses (except not a real latch)
+    logic [ADDR_WIDTH-1:0] _awaddr_reg,  _araddr_reg;
+    assign _awaddr = (axi_m.awvalid) ? axi_m.awaddr : _awaddr_reg;
+    assign _araddr = (axi_m.arvalid) ? axi_m.araddr : _araddr_reg;
+    always_ff @(posedge axi_m.aclk) begin
         if (!axi_m.areset_n) begin
-            _awaddr <= 0;
-            _araddr <= 0;
+            _awaddr_reg <= 0;
+            _araddr_reg <= 0;
         end
         else begin
             if (axi_m.awvalid) begin
-                _awaddr <= axi_m.awaddr;
+                _awaddr_reg <= axi_m.awaddr;
             end
             if (axi_m.arvalid) begin
-                _araddr <= axi_m.araddr;
+                _araddr_reg <= axi_m.araddr;
             end
         end
     end
@@ -135,20 +138,20 @@ module axi4_lite_crossbar4 #(
     // Connect multiplexed signals
     // axi_m
     always_comb begin
-        case (wr_active)
-            'b0001: begin
+        casez (wr_active)
+            'b???1: begin
                 axi_m.awready   = axi_s00.awready;
                 axi_m.wready    = axi_s00.wready;
                 axi_m.bvalid    = axi_s00.bvalid;
                 axi_m.bresp     = axi_s00.bresp;
             end
-            'b0010: begin
+            'b??10: begin
                 axi_m.awready   = axi_s01.awready;
                 axi_m.wready    = axi_s01.wready;
                 axi_m.bvalid    = axi_s01.bvalid;
                 axi_m.bresp     = axi_s01.bresp;
             end
-            'b0100: begin
+            'b?100: begin
                 axi_m.awready   = axi_s02.awready;
                 axi_m.wready    = axi_s02.wready;
                 axi_m.bvalid    = axi_s02.bvalid;

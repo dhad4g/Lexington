@@ -1,9 +1,10 @@
+//depend reset.sv
 //depend soc.sv
 //depend core.sv
 //depend core/*.sv
 //depend mem/*.sv
 //depend axi4_lite_manager.sv
-//depend axi4_lite_crossbar.sv
+//depend axi4_lite_crossbar4.sv
 //depend peripheral/*.sv
 `timescale 1ns/1ps
 
@@ -12,7 +13,7 @@
 module top (
 
     // Clock signal
-    input  logic clk,                   // Basys3 input clock
+    input  logic sys_clk_pin,                   // Basys3 input clock
 
     // Switches
     inout  logic [15:0] sw,
@@ -56,18 +57,17 @@ module top (
 );
 
     logic core_clk;
-    logic rst, rst_n;
+    logic rst_n;
     logic [15:0] gpioa;
     logic [15:0] gpiob;
     logic [15:0] gpioc;
 
-    // Register reset button due to sub-optimal I/O pin
-    // avoids ERROR:[Place 30-574]
-    always_ff @(posedge clk) begin
-        rst <= btnC;
-    end
+    reset RESET (
+        .clk(core_clk),
+        .rst_n_i(~btnC),
+        .rst_n_o(rst_n)
+    );
 
-    assign rst_n = ~rst;
     assign gpioa = led;
     assign gpiob = sw;
     assign gpioc[7:0] = JA;
@@ -79,7 +79,7 @@ module top (
 
 
     soc #(
-        .CLK_FREQ(40_000_000),
+        .CLK_FREQ(10_000_000),
         .UART0_BAUD(9600),
         .UART0_FIFO_DEPTH(8)
     ) SOC (
@@ -99,10 +99,26 @@ module top (
     // 7 Series
     // Xilinx HDL Libraries Guide, version 2012.2
     // The valid FVCO range for speed grade -1 is 600MHz to 1200MHz
-    // Generate a core_clk of 40 MHz
+    // Configured to generate 10 MHz clock (100*15.625/78.125/2)
+    // Parameters from Vivado Clocking Wizard
+    //      Output Freq     CLKFBOUT_MULT_F     CLKOUT0_DIVIDE_F    DIVCLK_DIVIDE
+    //          100 MHz         10                  10                  1
+    //           90 MHz         49.5                11                  5
+    //           80 MHz         10                  12.5                1
+    //           70 MHz         49.875              14.25               5
+    //           60 MHz         49.875              16.625              5
+    //           50 MHz         10                  20                  1
+    //           40 MHz         10                  25                  1
+    //           30 MHz         49.875              33.25               5
+    //           20 MHz          8.5                42.5                1
+    //           16 MHz         10                  62.5                1
+    //           12 MHz         49.875              83.125              5
+    //           10 MHz         15.625              78.125              2
+    //            8 MHz         10                 125                  1
+    //            5 MHz         32                 128                  5
     MMCME2_BASE #(
         .BANDWIDTH("OPTIMIZED"),    // Jitter programming (OPTIMIZED, HIGH, LOW)
-        .CLKFBOUT_MULT_F(10.0),     // Multiply value for all CLKOUT (2.000-64.000).
+        .CLKFBOUT_MULT_F(15.625),     // Multiply value for all CLKOUT (2.000-64.000).
         .CLKFBOUT_PHASE(0.0),       // Phase offset in degrees of CLKFB (-360.000-360.000).
         .CLKIN1_PERIOD(10.0),       // Input clock period in ns to ps resolution (i.e. 33.333 is 30 MHz).
         // CLKOUT0_DIVIDE - CLKOUT6_DIVIDE: Divide amount for each CLKOUT (1-128)
@@ -112,7 +128,7 @@ module top (
         // .CLKOUT4_DIVIDE(1),
         // .CLKOUT5_DIVIDE(1),
         // .CLKOUT6_DIVIDE(1),
-        .CLKOUT0_DIVIDE_F(25.0),    // Divide amount for CLKOUT0 (1.000-128.000).
+        .CLKOUT0_DIVIDE_F(78.125),    // Divide amount for CLKOUT0 (1.000-128.000).
         // CLKOUT0_DUTY_CYCLE - CLKOUT6_DUTY_CYCLE: Duty cycle for each CLKOUT (0.01-0.99).
         .CLKOUT0_DUTY_CYCLE(0.5),
         // .CLKOUT1_DUTY_CYCLE(0.5),
@@ -130,9 +146,9 @@ module top (
         // .CLKOUT5_PHASE(0.0),
         // .CLKOUT6_PHASE(0.0),
         // .CLKOUT4_CASCADE("FALSE"),  // Cascade CLKOUT4 counter with CLKOUT6 (FALSE, TRUE)
-        .DIVCLK_DIVIDE(1),          // Master division value (1-106)
+        .DIVCLK_DIVIDE(2),          // Master division value (1-106)
         .REF_JITTER1(0.0),          // Reference input jitter in UI (0.000-0.999).
-        .STARTUP_WAIT("FALSE")      // Delays DONE until MMCM is locked (FALSE, TRUE)
+        .STARTUP_WAIT("TRUE")      // Delays DONE until MMCM is locked (FALSE, TRUE)
     )
     MMCME2_BASE_inst (
         // Clock Outputs: 1-bit (each) output: User configurable clock outputs
@@ -153,7 +169,7 @@ module top (
         // Status Ports: 1-bit (each) output: MMCM status ports
         .LOCKED(pll_locked),            // 1-bit output: LOCK
         // Clock Inputs: 1-bit (each) input: Clock input
-        .CLKIN1(clk),            // 1-bit input: Clock
+        .CLKIN1(sys_clk_pin),            // 1-bit input: Clock
         // Control Ports: 1-bit (each) input: MMCM control ports
         .PWRDWN(0),            // 1-bit input: Power-down
         .RST(rst),                  // 1-bit input: Reset
