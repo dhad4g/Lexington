@@ -33,5 +33,5 @@ Writes are performed synchronously.
 Additionally, reading from address zero always returns zeros.
 Writing to address zero has no effect.
 
-![Block Diagram](./figures/RegisterFile.drawio.svg) \
+![Block Diagram](./figures/RegisterFile.drawio.png) \
 **Figure 1.** Register File block diagram

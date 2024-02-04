@@ -1,8 +1,9 @@
 proc usage {} {
     set SCRIPT_NAME $argv0
     puts ""
-    puts "usage: $SCRIPT_NAME \[option\]... <src file(s)>..."
+    puts "usage: $SCRIPT_NAME \[option\]... -target <target> <src file(s)>..."
     puts ""
+    puts "    -target <target>      Target name (ex: Basys3)"
     puts "    <src file(s)>         One or more Verilog source files"
     puts ""
     puts "    -i, -include_dirs     Include directory"
@@ -24,10 +25,11 @@ lappend sv_files
 for {set i 0} {$i < $argc} {incr i} {
     set option [string trim [lindex $argv $i]]
     switch -regexp -- $option {
-        "^(-i|--?include_dirs)"  { incr i; set inc_dir [lindex $argv $i]}
-        "^(-v|--?verbose)"       { set_param messaging.defaultLimit 1000 }
-        "^--?debug"               { set debug 1}
-        "^(-h|--?help)"          { usage; exit 0}
+        "^--?target"            { incr i; set target [lindex $argv $i] }
+        "^(-i|--?include_dirs)" { incr i; set inc_dir [lindex $argv $i]}
+        "^(-v|--?verbose)"      { set_param messaging.defaultLimit 1000 }
+        "^--?debug"             { set debug 1}
+        "^(-h|--?help)"         { usage; exit 0}
         default {
             lappend sv_files [lindex $argv $i]
         }
@@ -66,10 +68,10 @@ set_param general.maxThreads [numberOfCPUs]
 
 # Load sources
 read_verilog -sv $sv_files
-read_xdc Basys3.xdc
+read_xdc "${target}.xdc"
 
 # Run Synthesis
-synth_design -top top -include_dirs $inc_dir -part xc7a35tcpg236-1 -flatten_hierarchy none
+synth_design -top $target -include_dirs $inc_dir -part xc7a35tcpg236-1 -flatten_hierarchy none
 write_verilog -force post_synth.v
 
 # Create debug core (Integrated Logic Analyzer)
@@ -111,4 +113,4 @@ report_power -file post_route_power.rpt
 report_drc -file post_imp_drc.rpt
 
 # Make bitstream
-write_bitstream -force lexington.bit
+write_bitstream -force "${target}.bit"

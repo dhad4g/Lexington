@@ -59,7 +59,8 @@ GDB     = $(RISCV_PREFIX)gdb
 # Flags
 # --------------------------------------------------
 # Main compiler opts
-CC_OPTS  = -march=$(MARCH) -mabi=$(MABI) -ffunction-sections -fdata-sections -Wl,--gc-sections -nostartfiles -Os
+CC_OPTS  = -march=$(MARCH) -mabi=$(MABI) -ffunction-sections -fdata-sections -Wl,--gc-sections -nostartfiles
+CC_OPTS += -std=c11 -Os -mstrict-align -mbranch-cost=0
 # Compiler warning flags
 CC_OPTS += -Wall -Wshadow -Wdouble-promotion -Wformat-overflow -Wformat-truncation -Wundef -fno-common -Wconversion
 # Compiler debug flags

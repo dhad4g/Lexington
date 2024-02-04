@@ -72,7 +72,7 @@ A read from this register removes data from the RX FIFO.
 If the RX FIFO is empty, `0x00` is read.
 Additionally, if new RX data is received and the RX FIFO is full, the new data will be discarded.
 
-![uartx_data register](../figures/UART_data_register.drawio.svg) \
+![uartx_data register](../figures/UART_data_register.drawio.png) \
 **Figure 1.** Data register
 
 <br>
@@ -81,7 +81,7 @@ The `uartx_conf` register is shown in Figure 2.
 This register is used to configure the UART transceiver as well as read it's status.
 Table 2 contains detailed information about each field.
 
-![uartx_conf register](../figures/UART_config_register.drawio.svg) \
+![uartx_conf register](../figures/UART_config_register.drawio.png) \
 **Figure 2.** Config register
 
 <br>

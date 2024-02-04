@@ -10,7 +10,7 @@
 
 
 // Top module for implementing Lexington CPU on the Digilent Basys3
-module top (
+module Basys3 (
 
     // Clock signal
     input  logic sys_clk_pin,                   // Basys3 input clock

@@ -15,9 +15,10 @@ source "${PROJ_DIR}/scripts/utils.sh"
 function usage {
     cat <<USAGE_EOF
 
-usage: $SCRIPT_NAME [option]... <sw proj name>
+usage: $SCRIPT_NAME [option]... <target> <sw project>
 
-    <sw proj name>      Name of software project (ex: blink)
+    <target>            Name of the target board (ex: Basys3)
+    <sw project>        Name of software project (ex: blink)
 
     -v, --verbose       Disable message limits
         --debug         Add debug core
@@ -35,6 +36,7 @@ if  [ $# -eq 0 ]; then
 fi
 
 # Parse args
+target=""
 proj=""
 verbose=""
 debug=""
@@ -59,15 +61,31 @@ while [[ $# -gt 0 ]]; do
             exit 1
             ;;
         *)
-            if [ "$proj" != "" ]; then
-                >&2 echo "Only one project name can be provided"
+            if [ "$target" == "" ]; then
+                target=("$1")
+            elif [ "$proj" == "" ]; then
+                proj=("$1")
+            else
+                >&2 echo "Only one software project can be provided"
                 usage
                 exit 1
             fi
-            proj=("$1")
             shift
     esac
 done
+
+top="${RTL_SRC_DIR}/${target}.sv"
+xdc="${PROJ_DIR}/scripts/${target}.xdc"
+
+# Check target files exist
+if [ ! -f "$top"]; then
+    >&2 echo "Target top file '$top' does not exist"
+    exit 1
+fi
+if [ ! -f "$xdc"]; then
+    >&2 echo "Target XDC file '$xdc' does not exist"
+    exit 1
+fi
 
 # Check project exists
 if [ ! -f "${SW_PROJ_DIR}/$proj/Makefile" ]; then
@@ -76,9 +94,7 @@ if [ ! -f "${SW_PROJ_DIR}/$proj/Makefile" ]; then
     exit 1
 fi
 
-
-echo "Beginning compile and implementation for software project $proj:"
-top="${RTL_SRC_DIR}/top.sv"
+echo "Beginning compile and implementation for project $proj:"
 mkdir -p "${PROJ_DIR}/build/implement"
 cd "${PROJ_DIR}/build/implement"
 
@@ -103,8 +119,8 @@ sv_files="$top $rval"
 echo
 
 # Copy XDC
-cp "${PROJ_DIR}/scripts/Basys3.xdc" .
+cp "${PROJ_DIR}/scripts/${target}.xdc" .
 
 # Implement
-TCL_ARGS="$verbose $debug -i $INC_DIR $sv_files"
+TCL_ARGS="$verbose $debug -i $INC_DIR -target $target $sv_files"
 special_exec vivado $VIVADO_OPTS -source "${PROJ_DIR}/scripts/build.tcl" -tclargs "$TCL_ARGS" 2>&1 | $OUT_FORMAT

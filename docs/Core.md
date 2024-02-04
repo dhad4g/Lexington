@@ -1,4 +1,4 @@
-# CPU Core
+# Core
 
 This is an RV32 core.
 It contains instantiations of all the necessary core submodules.
@@ -16,7 +16,7 @@ The following are optional features of the core that can be disabled via paramet
 - MTIME: machine timer address space can be omitted
 - AXI: AXI bus address space can be omitted
 
-![](./figures/Core_BlockDiagram.drawio.svg) \
+![](./figures/Core_BlockDiagram.drawio.png) \
 **Figure 1.** GPro Lexington minimal core implementation
 
 ## Ports

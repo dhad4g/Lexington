@@ -90,7 +90,7 @@ The `misa` reports the ISA supported by the hart.
 This implementation makes this register read-only
 Figure 1 shows the field encoding
 
-![](./figures/csr/misa.drawio.svg) \
+![](./figures/csr/misa.drawio.png) \
 **Figure 1.** Field encoding for `misa`
 
 The two-bit `MXL` field encodes the native base integer ISA width as shown in Table 1.
@@ -244,7 +244,7 @@ cleared by resolving the interrupt source.
 Bits 15:0 encode the standard interrupt causes as shown in Table 4. These bits
 have unique behaviors such as being read-only. They must be cleared by resolving
 the interrupt source (ex. write
-[`mtimecmp[h]`](#machine-timer-registers-mtime-and-mtimecmp) $\lt$ [`mtime[h]`](#machine-timer-registers-mtime-and-mtimecmp)).
+[`mtimecmp[h]`](#machine-timer-registers-mtime-and-mtimecmp) $<$ [`mtime[h]`](#machine-timer-registers-mtime-and-mtimecmp)).
 
 Additional interrupt sources are listed in the [`mcause`](#machine-cause-register-mcause)
 section. These bits are read/write and the bit must be cleared by software in the

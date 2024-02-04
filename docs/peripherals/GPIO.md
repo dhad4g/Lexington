@@ -44,7 +44,7 @@ Data in the `idata` register is read asynchronously from the I/O pins.
 If a pin does not exist, the corresponding bit is read-only zero.
 The *int_conf* register encoding is shown in Figure 1.
 
-![](../figures/GPIO_interrupt_register.drawio.svg)
+![](../figures/GPIO_interrupt_register.drawio.png)
 
 **Figure 1.** `gpiox_int_conf` register encoding
 

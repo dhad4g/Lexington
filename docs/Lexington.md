@@ -6,7 +6,7 @@ The GPro Lexington CPU is a single-cycle RISC-V RV32I implementation.
 It features a read-only program memory and separate read/write data memory.
 Figure 1 shows a simplified diagram of the CPU core
 
-![](./figures/Core_BlockDiagram.drawio.svg) \
+![](./figures/Core_BlockDiagram.drawio.png) \
 **Figure 1.** GPro Lexington minimal core implementation
 
 ## Behavior
@@ -31,7 +31,7 @@ Information about programming the device is found in the [Toolchain](./Toolchain
 
 A full diagram of the SoC (minus peripherals) is shown in Figure 2.
 
-![](./figures/BlockDiagram.drawio.svg) \
+![](./figures/BlockDiagram.drawio.png) \
 **Figure 2.** GPro Lexington SoC
 
 ### Memory Map
@@ -49,7 +49,7 @@ See [Load/Store specification](./Load_Store.md#memory-mapped-devices) for device
 - **AXI I/O**: This region is for memory mapped I/O peripherals such as UART.
 See [Load/Store specification](./Load_Store.md#memory-mapped-devices) for device addresses.
 
-![](./figures/MemoryMap.drawio.svg) \
+![](./figures/MemoryMap.drawio.png){height=300px} \
 **Figure 3.** Memory Map
 
 Addresses for system devices, such as the machine-mode timer (mtime), can be found in the [DBus](./DBus.md) section.
@@ -58,7 +58,7 @@ Addresses for peripheral devices can be found in the [AXI4-Lite Crossbar](./AXI4
 
 ### Reset
 
-Upon reset, the `pc` is set to 0x0000_000.
+Upon reset, the `pc` is set to 0x0000_0000.
 
 
 ### Non-Maskable Interrupts (NMI)

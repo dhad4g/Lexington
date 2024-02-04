@@ -1,0 +1,37 @@
+{
+    "GPro1_Lexington_Datasheet": {
+        "sections": {
+            "Lexington.md": {},
+            "Lexington Core": {
+                "Core.md": {},
+                "Fetch.md": {},
+                "Decode.md": {},
+                "ALU.md": {},
+                "LoadStore.md": {},
+                "CSR.md": {},
+                "Trap.md": {},
+                "IBus.md" : {},
+                "DBus.md": {},
+                "AXI4-Lite_Manager.md": {},
+                "mtime.md": {}
+            },
+            "ROM.md": {},
+            "RAM.md": {},
+            "Main Data Bus": {
+                "AXI4-Lite.md": {},
+                "AXI4-Lite_Crossbar.md": {}
+            },
+            "Peripherals": {
+                "peripherals/GPIO.md": {},
+                "peripherals/UART.md": {},
+                "peripherals/Timer.md": {}
+            }
+        }
+    },
+    "GPro1_Lexington_UserGuide": {
+        "sections": {
+            "GettingStarted.md": {},
+            "Repo.md": {}
+        }
+    }
+}
