@@ -1,8 +1,8 @@
 # GPro 1 (Lexington) RISC-V CPU
 
-![Status](https://img.shields.io/badge/status-active_development-blue)
-![Sim](https://img.shields.io/badge/simulation-passing-green)
-![FPGA](https://img.shields.io/badge/FPGA-failing-red)
+![Status](https://img.shields.io/badge/status-released-g)
+![Sim](https://img.shields.io/badge/simulation-passing-g)
+![FPGA](https://img.shields.io/badge/FPGA-partial-yellow)
 
 
 The GPro 1 (Lexington) is the first generation of RISC-V processors designed by
@@ -33,12 +33,11 @@ The GPro 2 (Saratoga) is currently in early development. The current status can 
 
 | Component | Docs | Sim | FPGA |
 | --- | --- | --- | --- |
-| Core  | ![](https://img.shields.io/badge/complete-g)      | ![](https://img.shields.io/badge/passing-g)       | ![](https://img.shields.io/badge/failing-red)
-| Debug | ![](https://img.shields.io/badge/missing-grey)    | ![](https://img.shields.io/badge/missing-grey)    | ![](https://img.shields.io/badge/missing-grey)
-| AXI   | ![](https://img.shields.io/badge/complete-g)      | ![](https://img.shields.io/badge/passing-g)       | ![](https://img.shields.io/badge/failing-red)
-| GPIO  | ![](https://img.shields.io/badge/complete-g)      | ![](https://img.shields.io/badge/passing-g)       | ![](https://img.shields.io/badge/failing-red)
-| Timers| ![](https://img.shields.io/badge/partial-yellow)  | ![](https://img.shields.io/badge/untested-orange) | ![](https://img.shields.io/badge/untested-orange)
-| UART  | ![](https://img.shields.io/badge/missing-grey)    | ![](https://img.shields.io/badge/missing-grey)    | ![](https://img.shields.io/badge/missing-grey)
+| Core  | ![](https://img.shields.io/badge/complete-g)      | ![](https://img.shields.io/badge/passing-g)       | ![](https://img.shields.io/badge/passing-g)
+| AXI   | ![](https://img.shields.io/badge/complete-g)      | ![](https://img.shields.io/badge/passing-g)       | ![](https://img.shields.io/badge/passing-g)
+| GPIO  | ![](https://img.shields.io/badge/complete-g)      | ![](https://img.shields.io/badge/passing-g)       | ![](https://img.shields.io/badge/passing-g)
+| Timers| ![](https://img.shields.io/badge/complete-g)  | ![](https://img.shields.io/badge/untested-orange) | ![](https://img.shields.io/badge/untested-orange)
+| UART  | ![](https://img.shields.io/badge/complete-g)    | ![](https://img.shields.io/badge/untested-orange)    | ![](https://img.shields.io/badge/untested-orange)
 
 ## Design and Microarchitecture
 
