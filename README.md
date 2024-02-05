@@ -2,7 +2,7 @@
 
 ![Status](https://img.shields.io/badge/status-released-g)
 ![Sim](https://img.shields.io/badge/simulation-passing-g)
-![FPGA](https://img.shields.io/badge/FPGA-partial-yellow)
+![FPGA](https://img.shields.io/badge/FPGA-passing-g)
 
 
 The GPro 1 (Lexington) is the first generation of RISC-V processors designed by
