@@ -32,6 +32,7 @@ The behavior of the GPIO pins is determined by the memory mapped registers descr
 Read and write access to these registers occurs synchronous to the AXI clock.
 
 **Table 1.** GPIO Memory Mapped Registers
+
 | Address Offset | Default Value | R/W | Name | Description |
 | --- | --- | --- | --- | --- |
 | 0x0 | 0 | r/w | `gpiox_mode`      | sets each pin as input or output (0=input,1=output)
@@ -51,6 +52,7 @@ The *int_conf* register encoding is shown in Figure 1.
 The int*x*_mode fields set the mode of interrupt *x*.
 
 **Table 2.** GPIO Interrupt Modes
+
 | Value | Mode | Description |
 | --- | --- | --- |
 | 0b000 | DISABLE | Disables the interrupt source |
@@ -58,6 +60,6 @@ The int*x*_mode fields set the mode of interrupt *x*.
 | 0b101 | FALLING | Interrupt triggers on falling-edge |
 | 0b110 | HIGH    | Interrupt triggers when high |
 | 0b111 | LOW     | Interrupt triggers when low |
-| *other* | *reserved* | 
+| *other* | *reserved* |
 
 The int*x*_pin fields select the source pin for interrupt *x*.

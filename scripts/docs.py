@@ -9,6 +9,8 @@ import subprocess
 DOCS_DIR = "./docs"
 BUILD_DIR = "./build/docs"
 
+INSTITUTE = "Gerber Prototyping"
+LOGO = "./docs/figures/GerberPrototypingBulb.png"
 AUTHORS = ["Andrew Gerber"]
 
 
@@ -37,14 +39,15 @@ def consolidate(sections:dict, parent_section:str) -> str:
     return content
 
 def format(content:str) -> str:
-    # content = content.replace("│","$\\vert$")
-    # content = content.replace("─","-")
-    # content = content.replace("├","$\\vdash$")
-    # content = content.replace("└","$\\llcorner$")
+    # Fix some relative paths
+    content = content.replace("../figures","./figures")
+    # Some special unicode characters
     content = content.replace("│","|")
     content = content.replace("─","-")
     content = content.replace("├","|")
     content = content.replace("└","|")
+    # Convert some HTML tags into latex
+    # content = content.replace("<br>", "")
     return content
 
 
@@ -62,7 +65,7 @@ def main() -> int:
             print(f"No 'sections' found for {filename}")
             return 1
         sections = meta['sections']
-        title = re.sub(r"_", " ", filename)
+
         # Consolidate markdown
         print("  Consolidating markdown files")
         content = consolidate(sections, "")
@@ -75,19 +78,33 @@ def main() -> int:
         print("  Converting to PDF")
         cmd  = f"pandoc {md_filename} -o {pdf_filename}"
         # cmd += f" --pdf-engine=xelatex"
-        # cmd += f" --template {os.path.abspath(DOCS_DIR)}/template.tex"
+        cmd += f" --template {os.path.abspath(DOCS_DIR)}/template.tex"
+        cmd += f" --highlight-style {os.path.abspath(DOCS_DIR)}/style.theme"
         cmd += f" --resource-path {DOCS_DIR}"
         cmd +=  " --toc --toc-depth 3"
         cmd +=  " --number-sections"
         cmd +=  " --fail-if-warnings"
+        # cmd +=  " -V documentclass:article"
         cmd +=  " -V documentclass:scrartcl"
         # cmd += f" -V include-before:'{DOCS_DIR}/datasheet.tex'"
         cmd +=  " -V geometry:margin=1in"
         cmd +=  " -V fontsize:12pt"
         cmd +=  " -V hyperrefoptions:linktoc=all"
         cmd +=  " -V pagestyle:headings"
-        cmd +=  " -V colorlinks"
+        cmd +=  " -V colorlinks=true"
+        cmd +=  " -V linkcolor=blue"
+        cmd +=  " -V urlcolor=blue"
+        # cmd +=  " -V toccolor=gray"
+        cmd += f" -V institute:'{INSTITUTE}'"
+        cmd += f" -V logo:'{LOGO}'"
+        # Get title
+        if 'title' in meta:
+            title = meta['title']
+        else:
+            title = re.sub(r"_", " ", filename)
         cmd += f" -V title:'{title}'"
+        if 'subtitle' in meta:
+            cmd += f" -V subtitle:'{meta['subtitle']}'"
         for author in AUTHORS:
             cmd += f" -V author:'{author}'"
         rval = subprocess.call(cmd, shell=True)

@@ -34,6 +34,7 @@ For all other operations the carry output is undefined.
 The zero output is always set as the bitwise or of all result bits.
 
 **Table 1.** ALU Op Codes
+
 | `alu_op`| Name | Operation |
 | --- | --- | --- |
 | 4'b0000 | ALU_ADD     | add

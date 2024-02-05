@@ -1,6 +1,7 @@
 # General Purpose Timer (timer*x*)
 
 This is a general purpose 32-bit timer include:
+
 - Output compare interrupt
 - GPIO interrupt as count enable
 - Prescaler to divide counter clock up to 4096
@@ -38,6 +39,7 @@ An interrupt is signaled when `TIMERx_COUNT` equals `TIMERx_COMPARE`.
 To avoid a spurious interrupt, write both `TIMERx_COUNT` and `TIMERx_COMPARE` before enabling the timer.
 
 **Table 1.** Timer Memory Mapped Registers
+
 | Address | Default Value | R/W | Name | Description |
 | --- | --- | --- | --- | --- |
 | `BASE_ADDR` + 0x00 |   | r/w | `TIMERx_CTRL`      | control register
@@ -45,6 +47,7 @@ To avoid a spurious interrupt, write both `TIMERx_COUNT` and `TIMERx_COMPARE` be
 | `BASE_ADDR` + 0x08 | 0 | r/w | `TIMERx_COMPARE`   | compare value
 
 **Table 2.** Timer `ctrl` register encoding
+
 | Bit(s) | R/W | Name | Description |
 | --- | --- | --- | --- |
 | 0     | r/w | `TIMERx_CTRL_EN`        | Timer enable |
@@ -59,11 +62,13 @@ Loop mode counts up, but wraps to zero when the counter equals the compare value
 This results in a `TIMERx_COMPARE` + 1 cycle loop.
 
 **Table 3.** Timer Prescaler Configuration
+
 | `TIMERx_CTRL_PRSCL` | 0b000 | 0b001 | 0b010 | 0b011 | 0b100 | 0b101 | 0b110 | 0b111 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Clock Prescaler Value | 1 | 2 | 4 | 8 | 64 | 128 | 1024 | 4096 |
 
 **Table 4.** Timer Clock Source Configuration
+
 | `TIMERx_CTRL_SOURCE` | 0b00 | 0b01 | 0b10 | 0b11 |
 | --- | --- | --- | --- | --- |
 | Counter Clock Source | system clock | external clock | GPIOA interrupt 0 | GPIOA interrupt 1 |

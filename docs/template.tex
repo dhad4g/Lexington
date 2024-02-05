@@ -6,18 +6,10 @@ $endif$$if(dir)$$if(latex-dir-rtl)$
 \PassOptionsToPackage{RTLdocument}{bidi}
 $endif$$endif$%
 \documentclass[$if(fontsize)$$fontsize$,$endif$$if(lang)$$babel-lang$,$endif$$if(papersize)$$papersize$paper,$endif$$if(beamer)$ignorenonframetext,$if(handout)$handout,$endif$$if(aspectratio)$aspectratio=$aspectratio$,$endif$$endif$$for(classoption)$$classoption$$sep$,$endfor$]{$documentclass$}
-
 %--------------------------------------------------
-% Add box-draw characters
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{pmboxdraw}
-\usepackage{newunicodechar}
-\newunicodechar{└}{\textSFii}
-\newunicodechar{├}{\textSFviii}
-\newunicodechar{─}{\textSFx}
+% My changes
+\usepackage{rotating}
 %--------------------------------------------------
-
 $if(beamer)$
 $if(background-image)$
 \usebackgroundtemplate{%
@@ -105,7 +97,7 @@ $if(mainfont)$
     \setmainfont[$for(mainfontoptions)$$mainfontoptions$$sep$,$endfor$]{$mainfont$}
 $endif$
 $if(romanfont)$
-	\setromanfont[$for(romanfontoptions)$$romanfontoptions$$sep$,$endfor$]{$romanfont$}
+    \setromanfont[$for(romanfontoptions)$$romanfontoptions$$sep$,$endfor$]{$romanfont$}
 $endif$
 $if(sansfont)$
     \setsansfont[$for(sansfontoptions)$$sansfontoptions$$sep$,$endfor$]{$sansfont$}
@@ -238,8 +230,12 @@ $else$
 \IfFileExists{footnote.sty}{\usepackage{footnote}\makesavenoteenv{longtable}}{}
 $endif$
 $endif$
-$if(graphics)$
+%--------------------------------------------------
+% My changes
 \usepackage{graphicx,grffile}
+%--------------------------------------------------
+$if(graphics)$
+% \usepackage{graphicx,grffile}
 \makeatletter
 \def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
 \def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
@@ -332,48 +328,99 @@ $for(bibliography)$
 $endfor$
 $endif$
 
-$if(title)$
-\title{$title$$if(thanks)$\thanks{$thanks$}$endif$}
-$endif$
-$if(subtitle)$
-\providecommand{\subtitle}[1]{}
-\subtitle{$subtitle$}
-$endif$
-$if(author)$
-\author{$for(author)$$author$$sep$ \and $endfor$}
-$endif$
-$if(institute)$
-\providecommand{\institute}[1]{}
-\institute{$for(institute)$$institute$$sep$ \and $endfor$}
-$endif$
-\date{$date$}
-$if(beamer)$
-$if(titlegraphic)$
-\titlegraphic{\includegraphics{$titlegraphic$}}
-$endif$
-$if(logo)$
-\logo{\includegraphics{$logo$}}
-$endif$
-$endif$
+
+% $if(title)$
+% \title{$title$$if(thanks)$\thanks{$thanks$}$endif$}
+% $endif$
+% $if(subtitle)$
+% \providecommand{\subtitle}[1]{}
+% \subtitle{$subtitle$}
+% $endif$
+% $if(author)$
+% \author{$for(author)$$author$$sep$ \and $endfor$}
+% $endif$
+% $if(institute)$
+% \providecommand{\institute}[1]{}
+% \institute{$for(institute)$$institute$$sep$ \and $endfor$}
+% $endif$
+% \date{$date$}
+% $if(beamer)$
+% $if(titlegraphic)$
+% \titlegraphic{\includegraphics{$titlegraphic$}}
+% $endif$
+% $if(logo)$
+% \logo{\includegraphics{$logo$}}
+% $endif$
+% $endif$
+
+
+
 
 \begin{document}
+
+
+% $if(title)$
+% $if(beamer)$
+% \frame{\titlepage}
+% $else$
+% \maketitle
+% $endif$
+% $if(abstract)$
+% \begin{abstract}
+% $abstract$
+% \end{abstract}
+% $endif$
+%
+% % My changes
+% \clearpage
+% %--------------------------------------------------
+% $endif$
+
+
+%--------------------------------------------------
+% Custom title page
 $if(title)$
-$if(beamer)$
-\frame{\titlepage}
-$else$
-\maketitle
+\begin{center}
+    \thispagestyle{empty}
+    $if(institute)$
+        {\LARGE $institute$} \\
+        \vspace{0.5cm}
+    $endif$
+    $if(logo)$
+        \includegraphics[height=2cm]{$logo$} \\
+    $endif$
+    \vspace{5cm}
+    \textbf{\LARGE GPro1 Lexington}\\[\baselineskip] % Main title
+    $if(subtitle)$
+        {\LARGE \textit{$subtitle$}} \\ % Subtitle
+    $endif$
+    \vspace{3cm}
+    $if(author)$
+        {\large Authors:} \\
+        \vspace{0.5cm}
+        $for(author)$
+            {\large \textit{$author$}} \\
+        $endfor$
+    $endif$
+    \vfill
+    This document is a part of an open source project which is freely available
+    for private and comercial use under the GPLv3 license. For additional information
+    or better rendering of large tables, refer to
+    \href{https://github.com/GProCpu/Lexington}{https://github.com/GProCpu/Lexington}.
+    \\ \vspace{0.5cm}
+    Copyright (C) \the\year{}  $institute$ \\
+    \vspace{1cm}
+    \today
+\end{center}
+\clearpage
 $endif$
-$if(abstract)$
-\begin{abstract}
-$abstract$
-\end{abstract}
-$endif$
-$endif$
+%--------------------------------------------------
+
 
 $for(include-before)$
 $include-before$
-
 $endfor$
+
 $if(toc)$
 $if(toc-title)$
 \renewcommand*\contentsname{$toc-title$}
@@ -394,14 +441,32 @@ $endif$
 \tableofcontents
 }
 $endif$
+%--------------------------------------------------
+% My changes
+\clearpage
+%--------------------------------------------------
 $endif$
+
 $if(lot)$
 \listoftables
+%--------------------------------------------------
+% My changes
+\clearpage
+%--------------------------------------------------
 $endif$
 $if(lof)$
 \listoffigures
+%--------------------------------------------------
+% My changes
+\clearpage
+%--------------------------------------------------
 $endif$
+
+
+
+
 $body$
+
 
 $if(natbib)$
 $if(bibliography)$

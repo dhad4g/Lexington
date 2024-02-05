@@ -3,6 +3,7 @@
 This is a memory-mapped, full-duplex UART transceiver with FIFOs and interrupt support for both transmit and receive.
 The BAUD rate is static at runtime, but can be configured at compile time with a default of 9600.
 This implementation uses the following parameters:
+
 - BAUD: 9600
 - Data bits: 8
 - Stop bits: 1
@@ -87,6 +88,7 @@ Table 2 contains detailed information about each field.
 <br>
 
 **Table 2.** Config Register Fields `uartx_conf`
+
 | Index | Size | Default | R/W | Name | Description |
 | --- | --- | --- | --- | --- | --- |
 | 0 | 1 | 0 | ro | `rx_busy`    | Asserted when the data is currently being received
@@ -118,6 +120,7 @@ Alternately, the interrupt source can be disabled.
 
 
 **Table 3.** Interrupt Configuration
+
 | Index | Interrupt Mode |
 | --- | --- |
 | 0 | RX/TX done interrupt

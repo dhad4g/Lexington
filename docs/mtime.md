@@ -39,6 +39,7 @@ These two bits correspond to the byte-addressable address bits `addr_32[3:2]`.
 These registers are defined in the [CSR](./CSR.md) documentation.
 
 **Table 1.** Mtime Memory Mapped Registers
+
 | Addr | Name | Description |
 | --- | --- | --- |
 | 0xC000_0000 | `mtime`     | Lower 32 bits of `mtime`

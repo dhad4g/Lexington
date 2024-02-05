@@ -1,5 +1,7 @@
 {
     "GPro1_Lexington_Datasheet": {
+        "title": "GPro1 Lexington",
+        "subtitle": "Datasheet",
         "sections": {
             "Lexington.md": {},
             "Lexington Core": {
@@ -29,6 +31,8 @@
         }
     },
     "GPro1_Lexington_UserGuide": {
+        "title": "GPro1 Lexington",
+        "subtitle": "User Guide",
         "sections": {
             "GettingStarted.md": {},
             "Repo.md": {}

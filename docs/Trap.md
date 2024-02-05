@@ -33,6 +33,7 @@ and *interrupt*.
 - **`dbus_wait`** flag indicating dbus transaction requires extra cycle
 
 *exception flags*
+
 - **`inst_access_fault`** instruction access fault flag, from fetch
 - **`inst_misaligned`** instruction address misaligned flag, from Decode
 - **`illegal_inst`** illegal instruction flag, from decoder
@@ -46,6 +47,7 @@ and *interrupt*.
 - **`data_addr[WIDTH-1:0]`** data address from LSU
 
 *interrupt flags*
+
 - **`mtime_int`** machine timer interrupt
 - **`gpioa_int_0`** GPIOA interrupt 0
 - **`gpioa_int_1`** GPIOA interrupt 1
@@ -97,9 +99,10 @@ Exceptions always have priority over interrupts.
 
 If an interrupt flag is asserted, the appropriate bit in `mip` is set.
 Interrupt conditions are continually evaluated, and an interrupt will trap if:
-1) global interrupts are enabled, indicated by `mstatus_mie` being asserted,
-2) an interrupt is both pending and enabled, indicated by the same bit being asserted in `mip` and `mie` respectively.
-3) an exception is not occurring
+
+1. global interrupts are enabled, indicated by `mstatus_mie` being asserted,
+2. an interrupt is both pending and enabled, indicated by the same bit being asserted in `mip` and `mie` respectively.
+3. an exception is not occurring
 
 All interrupts, standard and non-standard, are registered and are thus delayed
 by 1 cycle.
@@ -109,6 +112,7 @@ Interrupts use a static priority scheme where lower trap codes have higher inter
 ## Traps
 
 When a trap occurs:
+
 - `next_pc` <= *base* of `mtvec`
 - `mepc` <= address of instruction causing the exception or interrupted instruction
 - `mcause` <= exception code (see [CSR](./CSR.md) documentation)
@@ -118,6 +122,7 @@ When a trap occurs:
 *Note: see the [CSR](./CSR.md) documentation for details of how a trap affects the global interrupt enable bits in `mstatus`.*
 
 **Table 2.** `mtval` encoding
+
 | Exception | Value |
 | --- | --- |
 | breakpoint    | faulting address |
@@ -133,6 +138,7 @@ The trap unit contains several CSRs.
 See the [CSR](./CSR.md) documentation for more details.
 
 **Table 3.** Trap Unit CSRs
+
 | CSR | Hardware | Software |
 | --- | --- | --- |
 | `mtvec`   | read  | r/w |

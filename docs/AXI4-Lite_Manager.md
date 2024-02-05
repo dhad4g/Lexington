@@ -38,12 +38,12 @@ If a transaction does not complete within in this number of cycles, an `access_f
 
 While an AXI transaction is progress, the `busy` signal should be asserted.
 It can be assumed that if the busy signal is asserted then the `rd_en` and `wr_en` signals will remain stable.
-An example read transaction waveform  is shown in Figure 1.
+<!-- An example read transaction waveform  is shown in Figure 1. -->
 The waveform depicts a load instruction immediately follows by another load instruction.
 Notice how the `busy` signal extends these instructions across multiple cycles.
-A complimentary write transaction waveform is shown in Figure 2.
+<!-- A complimentary write transaction waveform is shown in Figure 2. -->
 
-```wavedrom
+<!-- ```wavedrom
 {signal: [
     {name: 'clk',       wave: 'p.........'},
     {name: 'rd_en',     wave: '01...1...0'},
@@ -78,4 +78,4 @@ A complimentary write transaction waveform is shown in Figure 2.
     {name: 'bready',    wave: '0..1.010..'}
 ]}
 ```
-**Figure 2.** Write transactions
+**Figure 2.** Write transactions -->

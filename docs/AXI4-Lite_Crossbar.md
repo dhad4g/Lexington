@@ -31,6 +31,7 @@ All subordinates must have the same address width.
 ### Memory Map
 
 **Table 1.** Memory Mapped I/O
+
 | Address | Device |
 | --- | --- |
 | 0xFFFF_FF00 - 0xFFFF_FF0F | `TIM0` |
