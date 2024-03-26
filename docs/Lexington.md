@@ -18,7 +18,7 @@ Detailed behavior of each submodule is contained in these documents:
 - [Register File](./RegisterFile.md)
 - [PC](./PC.md)
 - [Fetch Unit](./Fetch.md)
-- [Decode Unit](./Decoder.md)
+- [Decode Unit](./Decode.md)
 - [Arithmetic Logic Unit (ALU)](./ALU.md)
 - [Load/Store Unit (LSU)](./Load_Store.md)
 - [Data Bus (DBus)](./DBus.md)
