@@ -45,6 +45,8 @@ Complete design documentation can be found in [docs/Lexington.md](./docs/Lexingt
 
 ## Getting Started
 
+A full getting started guide can be found [here](./docs/GettingStarted.md).
+
 The toolchain can be set up using either a Linux environment or a hybrid Windows/WSL environment.
 Some Linux is required as the RISC-V GNU toolchain does not support Windows.
 
@@ -55,7 +57,7 @@ If using Windows, you must also install git for Windows using the default instal
 
 ### GCC
 
-To install the RISC-V GNU toolchain by following [these instruction](./docs/Toolchain.md).
+To install the RISC-V GNU toolchain by following [these instruction](./docs/GettingStarted.md).
 If using Windows, this must installed in WSL.
 
 
