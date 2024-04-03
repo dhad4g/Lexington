@@ -7,7 +7,7 @@ module soc_TB;
 
     localparam CLK_PERIOD = 100;
     localparam CYCLES_PER_MILLI = 1_000_000 / CLK_PERIOD;
-    localparam SIM_MILLIS = 10;
+    localparam SIM_MILLIS = 1;
 
     localparam MAX_CYCLES = SIM_MILLIS * CYCLES_PER_MILLI;
     integer clk_count = 0;

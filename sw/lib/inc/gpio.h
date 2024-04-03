@@ -10,9 +10,9 @@
 #define INPUT           0
 #define OUTPUT          1
 
-#define GPIOA_BASE      ((uint32_t)0xFFFFFFA0U)
-#define GPIOB_BASE      ((uint32_t)0xFFFFFFB0U)
-#define GPIOC_BASE      ((uint32_t)0xFFFFFFC0U)
+#define GPIOA_BASE      ((uint32_t) 0xFFFFFFA0U)
+#define GPIOB_BASE      ((uint32_t) 0xFFFFFFB0U)
+#define GPIOC_BASE      ((uint32_t) 0xFFFFFFC0U)
 
 typedef volatile struct __attribute__((packed,aligned(4))) {
     uint32_t MODE;
