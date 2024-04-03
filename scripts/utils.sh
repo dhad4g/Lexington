@@ -32,7 +32,7 @@ function wsl_to_win_path() {
 # Function for WSL support
 function special_exec () {
     echo "$@"
-    which powershell.exe > /dev/null
+    which powershell.exe &> /dev/null
     if [ "$?" == "0" ]; then
         args=$(wsl_to_win_path "$@")
         "/mnt/c/Program Files/Git/bin/bash.exe" -c "$args"

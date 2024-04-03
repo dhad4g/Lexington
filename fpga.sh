@@ -6,7 +6,7 @@ RTL_SRC_DIR="${PROJ_DIR}/rtl"
 INC_DIR="${PROJ_DIR}/rtl"
 SW_PROJ_DIR="${PROJ_DIR}/sw/projects"
 
-VIVADO_OPTS="-mode tcl"
+VIVADO_OPTS="-mode batch"
 
 # Include common functions and definitions such as OUT_FILTER and special_exec()
 source "${PROJ_DIR}/scripts/utils.sh"
@@ -78,11 +78,11 @@ top="${RTL_SRC_DIR}/${target}.sv"
 xdc="${PROJ_DIR}/scripts/${target}.xdc"
 
 # Check target files exist
-if [ ! -f "$top"]; then
+if [ ! -f "$top" ]; then
     >&2 echo "Target top file '$top' does not exist"
     exit 1
 fi
-if [ ! -f "$xdc"]; then
+if [ ! -f "$xdc" ]; then
     >&2 echo "Target XDC file '$xdc' does not exist"
     exit 1
 fi
