@@ -61,6 +61,11 @@ Implement the PS/2 controller as a SystemVerilog module name `ps2_controller` in
 `rtl/peripheral/ps2_controller.sv`. Note that all Verilog syntax is valid in
 SystemVerilog. You should lean heavily on the design you documented in Step 2.
 
+The UART RX module (`rtl/peripherals/uart_rx.sv`) has a very similar design. You
+may want to use this as a starting point and reference. Note that it does use
+oversampling by 8 (i.e. 8 samples are taken per bit and the middle three are
+*averaged*).
+
 #### 2c. Test PS/2 Controller
 
 Move `ps2_controller_TB.sv` from this directory to
