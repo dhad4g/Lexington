@@ -23,3 +23,6 @@ signals from the keyboard and hands the data to the PS/2 module.
 
 
 ## Behavior
+
+![](ps2_controller_state_diagram.JPG)
+*Important: parity_chk is initialized to 1, not 0*
