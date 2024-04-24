@@ -1,6 +1,7 @@
 `timescale 1ns/1ps
 module ps2_controller (
     input clk,
+    input rst_n,
     input ps2_clk,
     input ps2_data,
 
@@ -16,6 +17,15 @@ module ps2_controller (
     assign ps2_clk_negedge = ~ps2_clk;
 
     initial state = 0;
+
+    always @(rst_n) begin 
+        if (!rst_n) begin 
+            state <= 0;
+            data <= 0;
+            valid <= 0;
+            err <= 0;
+        end
+    end
 
     always @(negedge ps2_clk, posedge ps2_clk) begin 
         case (state)

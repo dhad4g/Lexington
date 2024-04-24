@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 
 
-module gpio_TB;
+module ps2_controller_TB;
 
     localparam CLK_PERIOD = 10;
 
@@ -67,21 +67,23 @@ module gpio_TB;
 
             // Choice data to send
             _data = $random();
-            $write("%3d:    Sending 0x%02X ...");
-            $fwrite(fid,"%3d:    Sending 0x%02X ...");
+            $write("%3d:    Sending 0x%02X ...",clk_count,_data);
+            $fwrite(fid,"%3d:    Sending 0x%02X ...",clk_count,_data);
 
             // Start bit
             ps2_data <= 0;
             #(4*CLK_PERIOD);
             ps2_clk  <= 0;
             #(4*CLK_PERIOD);
-            ps2_clk  <= 1
+            ps2_clk  <= 1;
 
             // Data bits
             for (i=0; i<8; i++) begin
 
                 // TODO
-
+                ps2_data <= _data[i];
+                ps2_clk <= ~ps2_clk;
+                #(4*CLK_PERIOD);
                 $write("%b", _data[i]);
                 $fwrite(fid,"%b", _data[i]);
             end
