@@ -45,13 +45,12 @@ module ps2_controller (
             1: begin 
                 if (bit_pos == 7) begin 
                     data[bit_pos] <= ps2_data;
-                    parity_chk <= parity_chk ^ ps2_data;
                     state <= 2;
                 end
                 else begin 
                     data[bit_pos] <= ps2_data;
                     bit_pos <= bit_pos + 1;
-                    parity_chk <= parity_chk ^ ps2_data;
+                    parity_chk <= parity_chk^(^(data));
                     state <= 1;
                 end
             end

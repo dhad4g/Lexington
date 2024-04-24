@@ -5,7 +5,7 @@ module ps2_controller_TB;
 
     localparam CLK_PERIOD = 10;
 
-    localparam MAX_CYCLES = 128;
+    localparam MAX_CYCLES = 243;
     integer clk_count = 0;
     integer pass_count = 0;
     integer fail_count = 0;
@@ -72,7 +72,6 @@ module ps2_controller_TB;
 
             // Start bit
             ps2_data <= 0;
-            #(4*CLK_PERIOD);
             ps2_clk  <= 0;
             #(4*CLK_PERIOD);
             ps2_clk  <= 1;
@@ -90,6 +89,8 @@ module ps2_controller_TB;
 
             // Parity bit (odd parity)
             ps2_data <= !(^ _data); // use XOR reduction operator
+            $write("\nParity bit: %b\t", ps2_data);
+            $write("Expected parity bit: %b\n", DUT.parity_chk);
             #(4*CLK_PERIOD);
             ps2_clk  <= 0;
             #(4*CLK_PERIOD);
